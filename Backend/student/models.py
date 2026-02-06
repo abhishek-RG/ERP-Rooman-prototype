@@ -8,8 +8,16 @@ class Student(models.Model):
     """
     Student Profile Model
     """
+    CENTERS = [
+        ('Electronic City PMKK Futureskill (TC016371)', 'Electronic City PMKK Futureskill (TC016371)'),
+        ('Rajajinagar (123)', 'Rajajinagar (123)'),
+        ('Rajajinagar Bangalore (RAJBAN)', 'Rajajinagar Bangalore (RAJBAN)'),
+        ('Rooman Online (RON)', 'Rooman Online (RON)'),
+    ]
+    
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student_profile')
     student_id = models.CharField(max_length=20, unique=True)
+    center = models.CharField(max_length=100, choices=CENTERS, blank=True, null=True)
     enrollment_date = models.DateField()
     department = models.CharField(max_length=100)
     semester = models.IntegerField()
