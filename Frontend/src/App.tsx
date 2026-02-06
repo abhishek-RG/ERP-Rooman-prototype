@@ -27,6 +27,7 @@ import AdminStudents from './pages/admin/Students'
 import AdminEmployees from './pages/admin/Employees'
 import AdminReports from './pages/admin/Reports'
 import AdminSettings from './pages/admin/Settings'
+import AdminUserDetails from './pages/admin/UserDetails'
 
 function App() {
   return (
@@ -139,6 +140,14 @@ function App() {
             }
           />
           <Route
+            path="/admin/users/details/:id"
+            element={
+              <PrivateRoute role="admin">
+                <AdminUserDetails />
+              </PrivateRoute>
+            }
+          />
+          <Route
             path="/admin/students"
             element={
               <PrivateRoute role="admin">
@@ -154,6 +163,7 @@ function App() {
               </PrivateRoute>
             }
           />
+          
           <Route
             path="/admin/reports"
             element={
