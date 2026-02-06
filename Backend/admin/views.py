@@ -1,13 +1,13 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from django.contrib.auth import get_user_model
-from .models import AdminProfile, SystemSettings, AuditLog, Notification, Report
+from .models import AdminProfile, SystemSettings, AuditLog, Notification, Report, Enquiry
 from .serializers import (
     AdminProfileSerializer, UserManagementSerializer,
     SystemSettingsSerializer, AuditLogSerializer, 
-    NotificationSerializer, ReportSerializer
+    NotificationSerializer, ReportSerializer, EnquirySerializer
 )
 
 User = get_user_model()
@@ -139,3 +139,26 @@ class ReportViewSet(viewsets.ModelViewSet):
         """Generate a new report"""
         # Report generation logic here
         return Response({'message': 'Report generation started'})
+
+
+class EnquiryViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for Enquiry operations
+    """
+    queryset = Enquiry.objects.all()
+    serializer_class = EnquirySerializer
+    permission_classes = [AllowAny]  # Allow anyone to submit enquiries
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {'message': 'Enquiry submitted successfully', 'data': serializer.data},
+                status=status.HTTP_201_CREATED
+            )
+        return Response(
+            {'message': 'Failed to submit enquiry', 'errors': serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
