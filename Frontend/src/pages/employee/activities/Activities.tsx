@@ -1,21 +1,20 @@
 import { useState, useEffect } from 'react'
 import Layout from '../../../components/layout/Layout'
 import { activityService } from '../../../services/activityService'
-import { Activity, STATUS_CHOICES, PRIORITY_CHOICES } from '../../../types/activity'
+import { Activity } from '../../../types/activity'
 import Card from '../../../components/ui/Card'
 import LoadingSpinner from '../../../components/ui/LoadingSpinner'
 
 const EmployeeActivities = () => {
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
 
   const fetch = async () => {
     try {
       const data = await activityService.getActivities()
       setActivities(data.results)
     } catch (err) {
-      setError('Failed to load activities')
+      // Handle error silently
     } finally {
       setLoading(false)
     }

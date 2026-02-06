@@ -5,6 +5,9 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from django.http import HttpResponse
+import io
+from datetime import datetime
 from .models import AdminProfile, SystemSettings, AuditLog, Notification, Report, Activity, Enquiry
 from .serializers import (
     AdminProfileSerializer, UserManagementSerializer,
@@ -14,6 +17,26 @@ from .serializers import (
 )
 
 User = get_user_model()
+
+
+class IsAdminOrHasAdminProfile(IsAdminUser):
+    """
+    Permission check that allows admins (is_staff or is_superuser) or users with admin profile
+    """
+    def has_permission(self, request, view):
+        # Check if user is authenticated
+        if not request.user or not request.user.is_authenticated:
+            return False
+        
+        # Allow staff/superuser
+        if request.user.is_staff or request.user.is_superuser:
+            return True
+        
+        # Allow users with admin profile and admin role
+        if request.user.role == 'admin':
+            return AdminProfile.objects.filter(user=request.user).exists()
+        
+        return False
 
 
 class AdminProfileViewSet(viewsets.ModelViewSet):
@@ -44,7 +67,53 @@ class UserManagementViewSet(viewsets.ModelViewSet):
     """
     queryset = User.objects.all()
     serializer_class = UserManagementSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdminOrHasAdminProfile]
+    
+    def get_queryset(self):
+        """Filter users by role if role query parameter is provided"""
+        queryset = User.objects.all()
+        role = self.request.query_params.get('role', None)
+        if role and role in ['student', 'employee', 'admin']:
+            queryset = queryset.filter(role=role)
+        return queryset
+
+    def retrieve(self, request, pk=None):
+        """Retrieve a user and include role-specific profile fields."""
+        user = self.get_object()
+        serializer = self.get_serializer(user)
+        data = serializer.data
+
+        # Attach student or employee profile details if available
+        try:
+            if hasattr(user, 'role') and user.role == 'student':
+                from student.models import Student
+                student = Student.objects.filter(user=user).first()
+                if student:
+                    data.update({
+                        'student_id': getattr(student, 'student_id', None),
+                        'center': getattr(student, 'center', None),
+                        'enrollment_date': getattr(student, 'enrollment_date', None),
+                    })
+        except Exception:
+            pass
+
+        try:
+            if hasattr(user, 'role') and user.role == 'employee':
+                from employee.models import Employee
+                emp = Employee.objects.filter(user=user).first()
+                if emp:
+                    data.update({
+                        'employee_id': getattr(emp, 'employee_id', None),
+                        'designation': getattr(emp, 'designation', None),
+                        'department': getattr(emp, 'department', None),
+                        'join_date': getattr(emp, 'join_date', None),
+                        'salary': getattr(emp, 'salary', None),
+                        'employment_type': getattr(emp, 'employment_type', None),
+                    })
+        except Exception:
+            pass
+
+        return Response(data)
     
     @action(detail=True, methods=['post'])
     def activate(self, request, pk=None):
@@ -62,6 +131,58 @@ class UserManagementViewSet(viewsets.ModelViewSet):
         user.save()
         return Response({'message': 'User deactivated successfully'})
     
+    @action(detail=True, methods=['get'])
+    def invoice(self, request, pk=None):
+        """Generate and return a PDF invoice for the user."""
+        user = self.get_object()
+
+        # Gather profile identifier
+        profile_id = ''
+        if hasattr(user, 'role') and user.role == 'student':
+            try:
+                from student.models import Student
+                student = Student.objects.filter(user=user).first()
+                profile_id = student.student_id if student else ''
+            except Exception:
+                profile_id = ''
+        elif hasattr(user, 'role') and user.role == 'employee':
+            try:
+                from employee.models import Employee
+                emp = Employee.objects.filter(user=user).first()
+                profile_id = emp.employee_id if emp else ''
+            except Exception:
+                profile_id = ''
+
+        # Build invoice contents
+        invoice_number = f"INV-{user.id}-{int(datetime.utcnow().timestamp())}"
+        date_issued = datetime.utcnow().strftime('%Y-%m-%d')
+
+        # Generate PDF in-memory using reportlab
+        try:
+            from reportlab.pdfgen import canvas
+            buffer = io.BytesIO()
+            p = canvas.Canvas(buffer)
+            p.setFont('Helvetica-Bold', 16)
+            p.drawString(40, 800, 'ERP Rooman')
+            p.setFont('Helvetica', 12)
+            p.drawString(40, 780, f'Invoice Number: {invoice_number}')
+            p.drawString(40, 765, f'Date Issued: {date_issued}')
+            p.drawString(40, 745, f'Name: {user.get_full_name() or user.username}')
+            p.drawString(40, 730, f'Role: {user.role}')
+            p.drawString(40, 715, f'Email: {user.email}')
+            p.drawString(40, 700, f'ID: {profile_id}')
+            p.drawString(40, 680, 'Thank you for using ERP Rooman.')
+            p.showPage()
+            p.save()
+            buffer.seek(0)
+
+            response = HttpResponse(buffer, content_type='application/pdf')
+            filename = f"invoice_{user.username}.pdf"
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+        except Exception as e:
+            return Response({'detail': f'Failed to generate invoice: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     @action(detail=False, methods=['get'])
     def statistics(self, request):
         """Get user statistics"""
@@ -86,7 +207,7 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
     """
     queryset = SystemSettings.objects.all()
     serializer_class = SystemSettingsSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdminOrHasAdminProfile]
 
 
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
@@ -95,7 +216,7 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = AuditLog.objects.all()
     serializer_class = AuditLogSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdminOrHasAdminProfile]
 
 
 class NotificationViewSet(viewsets.ModelViewSet):
@@ -135,7 +256,7 @@ class ReportViewSet(viewsets.ModelViewSet):
     """
     queryset = Report.objects.all()
     serializer_class = ReportSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdminOrHasAdminProfile]
     
     @action(detail=False, methods=['post'])
     def generate(self, request):
