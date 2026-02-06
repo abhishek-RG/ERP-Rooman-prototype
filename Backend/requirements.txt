@@ -15,5 +15,8 @@ python-decouple==3.8
 # Image Processing
 Pillow==10.2.0
 
+# PDF Generation
+reportlab==4.0.9
+
 # Additional utilities
 python-dateutil==2.8.2

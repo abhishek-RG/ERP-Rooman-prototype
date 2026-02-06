@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
 from .models import AdminProfile, SystemSettings, AuditLog, Notification, Report, Activity, Enquiry
 
 User = get_user_model()
@@ -18,13 +19,140 @@ class AdminProfileSerializer(serializers.ModelSerializer):
 
 class UserManagementSerializer(serializers.ModelSerializer):
     """
-    Serializer for managing all users
+    Serializer for managing all users (creation and listing)
+    Supports role-specific profile creation
     """
+    password = serializers.CharField(write_only=True, required=False, validators=[validate_password])
+    
+    # Student-specific fields (optional, only used when role='student')
+    student_id = serializers.CharField(write_only=True, required=False)
+    center = serializers.CharField(write_only=True, required=False)
+    enrollment_date = serializers.DateField(write_only=True, required=False)
+    course = serializers.CharField(write_only=True, required=False)
+    guardian_name = serializers.CharField(write_only=True, required=False)
+    guardian_contact = serializers.CharField(write_only=True, required=False)
+    emergency_contact = serializers.CharField(write_only=True, required=False)
+    
+    # Employee-specific fields (optional, only used when role='employee')
+    employee_id = serializers.CharField(write_only=True, required=False)
+    designation = serializers.CharField(write_only=True, required=False)
+    department = serializers.CharField(write_only=True, required=False)
+    join_date = serializers.DateField(write_only=True, required=False)
+    salary = serializers.DecimalField(max_digits=10, decimal_places=2, write_only=True, required=False)
+    employment_type = serializers.CharField(write_only=True, required=False)
+    
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 
-                  'role', 'is_active', 'date_joined']
+                  'role', 'phone_number', 'password', 'is_active', 'date_joined',
+                  'student_id', 'center', 'enrollment_date', 'course', 'guardian_name',
+                  'guardian_contact', 'emergency_contact', 'employee_id', 'designation',
+                  'department', 'join_date', 'salary', 'employment_type']
         read_only_fields = ['id', 'date_joined']
+    
+    def create(self, validated_data):
+        """Create user with password and optional profile"""
+        from datetime import date
+        
+        password = validated_data.pop('password', None)
+        role = validated_data.get('role')
+        
+        # Extract all role-specific fields upfront
+        student_id = validated_data.pop('student_id', None)
+        center = validated_data.pop('center', None)
+        enrollment_date = validated_data.pop('enrollment_date', None)
+        course_code = validated_data.pop('course', None)
+        guardian_name = validated_data.pop('guardian_name', None)
+        guardian_contact = validated_data.pop('guardian_contact', None)
+        emergency_contact_student = validated_data.pop('emergency_contact', None)
+        
+        employee_id = validated_data.pop('employee_id', None)
+        designation = validated_data.pop('designation', None)
+        department = validated_data.pop('department', None)
+        join_date = validated_data.pop('join_date', None)
+        salary = validated_data.pop('salary', None)
+        employment_type = validated_data.pop('employment_type', None)
+        
+        # Create user first
+        user = User.objects.create_user(**validated_data)
+        if password:
+            user.set_password(password)
+            user.save()
+        
+        # Create student profile if role is student
+        if role == 'student':
+            try:
+                from student.models import Student, Course, Enrollment
+                
+                if not student_id:
+                    import uuid
+                    student_id = f"STU-{uuid.uuid4().hex[:8].upper()}"
+                
+                student = Student.objects.create(
+                    user=user,
+                    student_id=student_id,
+                    center=center or 'Rooman Online (RON)',
+                    enrollment_date=enrollment_date or date.today(),
+                    department='Unassigned',
+                    semester=1,
+                    guardian_name=guardian_name or 'Not Provided',
+                    guardian_contact=guardian_contact or '0000000000',
+                    emergency_contact=emergency_contact_student or '0000000000',
+                )
+                
+                # Create enrollment if course is provided
+                if course_code:
+                    try:
+                        course = Course.objects.get(course_code=course_code)
+                        Enrollment.objects.create(student=student, course=course)
+                    except Course.DoesNotExist:
+                        pass
+                        
+            except Exception as e:
+                user.delete()
+                raise serializers.ValidationError(f"Failed to create student profile: {str(e)}")
+        
+        # Create employee profile if role is employee
+        if role == 'employee':
+            try:
+                from employee.models import Employee
+                
+                if not employee_id:
+                    import uuid
+                    employee_id = f"EMP-{uuid.uuid4().hex[:8].upper()}"
+                
+                Employee.objects.create(
+                    user=user,
+                    employee_id=employee_id,
+                    designation=designation or 'Employee',
+                    department=department or 'General',
+                    join_date=join_date or date.today(),
+                    salary=salary or '50000.00',
+                    employment_type=employment_type or 'full-time',
+                    emergency_contact=emergency_contact_student or '0000000000',
+                )
+            except Exception as e:
+                user.delete()
+                raise serializers.ValidationError(f"Failed to create employee profile: {str(e)}")
+        
+        return user
+    
+    def update(self, instance, validated_data):
+        """Update user (password handled separately if provided)"""
+        password = validated_data.pop('password', None)
+        
+        # Remove write-only fields
+        for field in ['student_id', 'center', 'enrollment_date', 'course', 'guardian_name',
+                      'guardian_contact', 'emergency_contact', 'employee_id', 'designation',
+                      'department', 'join_date', 'salary', 'employment_type', 'confirmation_password']:
+            validated_data.pop(field, None)
+        
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if password:
+            instance.set_password(password)
+        instance.save()
+        return instance
 
 
 class SystemSettingsSerializer(serializers.ModelSerializer):
