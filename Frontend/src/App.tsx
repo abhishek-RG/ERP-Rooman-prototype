@@ -2,6 +2,10 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import PrivateRoute from './components/common/PrivateRoute'
 
+// Public Pages
+import LandingPage from './pages/public/LandingPage'
+import Enquiry from './pages/public/Enquiry'
+
 // Auth Pages
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
@@ -38,6 +42,8 @@ function App() {
       <div className="min-h-screen bg-gray-50">
         <Routes>
           {/* Public Routes */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/enquiry" element={<Enquiry />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
@@ -208,8 +214,7 @@ function App() {
           />
 
           {/* Default Route */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
     </AuthProvider>
