@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import AdminProfile, SystemSettings, AuditLog, Notification, Report, Enquiry
+from .models import AdminProfile, SystemSettings, AuditLog, Notification, Report, Enquiry, FollowUp
 
 User = get_user_model()
 
@@ -74,6 +74,11 @@ class EnquirySerializer(serializers.ModelSerializer):
             'organisation_name',
             'designation',
             'total_work_experience',
+            'reason_for_enquiry',
+            'course',
+            'lead_status',
+            'stage',
+            'notes',
             'mobile_number',
             'email',
             'country',
@@ -83,4 +88,11 @@ class EnquirySerializer(serializers.ModelSerializer):
             'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class FollowUpSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FollowUp
+        fields = ['id', 'enquiry', 'date', 'notes', 'outcome', 'next_follow_up_date', 'created_at']
+        read_only_fields = ['id', 'created_at']
 

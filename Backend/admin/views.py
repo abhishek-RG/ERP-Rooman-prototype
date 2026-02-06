@@ -7,7 +7,8 @@ from .models import AdminProfile, SystemSettings, AuditLog, Notification, Report
 from .serializers import (
     AdminProfileSerializer, UserManagementSerializer,
     SystemSettingsSerializer, AuditLogSerializer, 
-    NotificationSerializer, ReportSerializer, EnquirySerializer
+    NotificationSerializer, ReportSerializer, EnquirySerializer,
+    FollowUpSerializer
 )
 
 User = get_user_model()
@@ -149,6 +150,17 @@ class EnquiryViewSet(viewsets.ModelViewSet):
     serializer_class = EnquirySerializer
     permission_classes = [AllowAny]  # Allow anyone to submit enquiries
     
+    def list(self, request, *args, **kwargs):
+        """List all enquiries with pagination"""
+        queryset = self.get_queryset()
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({'results': serializer.data})
+    
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
@@ -161,4 +173,58 @@ class EnquiryViewSet(viewsets.ModelViewSet):
             {'message': 'Failed to submit enquiry', 'errors': serializer.errors},
             status=status.HTTP_400_BAD_REQUEST
         )
-
+    
+    @action(detail=True, methods=['patch'], url_path='update-status')
+    def update_status(self, request, pk=None):
+        """Update the lead_status of an enquiry"""
+        enquiry = self.get_object()
+        lead_status = request.data.get('lead_status')
+        
+        if lead_status not in ['cold', 'warm', 'hot']:
+            return Response(
+                {'error': 'Invalid lead_status. Must be cold, warm, or hot.'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        enquiry.lead_status = lead_status
+        enquiry.save()
+        serializer = self.get_serializer(enquiry)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['patch'], url_path='update-stage')
+    def update_stage(self, request, pk=None):
+        """Update the stage of an enquiry"""
+        enquiry = self.get_object()
+        new_stage = request.data.get('new_stage')
+        
+        if new_stage not in ['ENQUIRY', 'LEAD', 'CONVERTED']:
+            return Response(
+                {'error': 'Invalid stage. Must be ENQUIRY, LEAD, or CONVERTED.'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        enquiry.stage = new_stage
+        enquiry.save()
+        serializer = self.get_serializer(enquiry)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'], url_path='add-followup')
+    def add_followup(self, request, pk=None):
+        """Add a follow-up for an enquiry"""
+        enquiry = self.get_object()
+        data = request.data.copy()
+        data['enquiry'] = enquiry.id
+        
+        serializer = FollowUpSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=['get'], url_path='followups')
+    def get_followups(self, request, pk=None):
+        """Get all follow-ups for an enquiry"""
+        enquiry = self.get_object()
+        followups = enquiry.followups.all()
+        serializer = FollowUpSerializer(followups, many=True)
+        return Response(serializer.data)

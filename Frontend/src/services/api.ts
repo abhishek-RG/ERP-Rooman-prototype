@@ -58,3 +58,26 @@ api.interceptors.response.use(
 )
 
 export default api
+// Enquiry/Lead APIs
+export const enquiryAPI = {
+  fetchEnquiries: (params?: { page?: number; search?: string }) =>
+    api.get('/admin/enquiry/', { params }),
+  getEnquiry: (id: string | number) => api.get(`/admin/enquiry/${id}/`),
+  addEnquiry: (data: any) => api.post('/admin/enquiry/', data),
+  updateStatus: (id: string | number, lead_status: string) =>
+    api.patch(`/admin/enquiry/${id}/update-status/`, { lead_status }),
+  updateStage: (id: number | string, stage: string) => {
+    return api.patch(`/admin/enquiry/${id}/update-stage/`, { new_stage: stage })
+  },
+  addFollowUp: (enquiryId: number | string, followUpData: any) => {
+    return api.post(`/admin/enquiry/${enquiryId}/add-followup/`, followUpData)
+  },
+  getFollowUps: (enquiryId: number | string) => {
+    return api.get(`/admin/enquiry/${enquiryId}/followups/`)
+  }
+}
+
+export const leadAPI = {
+  fetchLeads: (params?: { page?: number; status?: string }) =>
+    api.get('/admin/leads/', { params }),
+}
