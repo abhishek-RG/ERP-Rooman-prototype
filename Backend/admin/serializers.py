@@ -84,3 +84,23 @@ class EnquirySerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
+    def validate_mobile_number(self, value):
+        """
+        Validate mobile number: must be exactly 10 digits and numbers only
+        """
+        if not value.isdigit() or len(value) != 10:
+            raise serializers.ValidationError("Please enter a valid 10-digit mobile number")
+        return value
+
+    def validate_email(self, value):
+        """
+        Validate email: ensures standard email format and custom error message
+        """
+        from django.core.validators import validate_email
+        from django.core.exceptions import ValidationError
+        try:
+            validate_email(value)
+        except ValidationError:
+            raise serializers.ValidationError("Please enter a valid email address")
+        return value
+

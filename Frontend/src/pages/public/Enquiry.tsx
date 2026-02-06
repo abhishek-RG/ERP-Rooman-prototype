@@ -24,16 +24,47 @@ const Enquiry = () => {
     const [loading, setLoading] = useState(false)
     const [success, setSuccess] = useState(false)
     const [error, setError] = useState('')
+    const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({})
+
+    const validateForm = () => {
+        const newErrors: { [key: string]: string } = {}
+
+        // Mobile Validation
+        if (!/^\d{10}$/.test(formData.mobile_number)) {
+            newErrors.mobile_number = "Please enter a valid 10-digit mobile number"
+        }
+
+        // Email Validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!emailRegex.test(formData.email)) {
+            newErrors.email = "Please enter a valid email address"
+        }
+
+        setFormErrors(newErrors)
+        return Object.keys(newErrors).length === 0
+    }
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         setFormData({
             ...formData,
             [e.target.name]: e.target.value
         })
+        // Clear error when user types
+        if (formErrors[e.target.name]) {
+            setFormErrors({
+                ...formErrors,
+                [e.target.name]: ''
+            })
+        }
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+
+        if (!validateForm()) {
+            return
+        }
+
         setLoading(true)
         setError('')
 
@@ -348,9 +379,12 @@ const Enquiry = () => {
                                             value={formData.mobile_number}
                                             onChange={handleChange}
                                             required
-                                            className="w-full px-4 py-3 bg-white text-gray-900 border-2 border-gray-200 rounded-xl focus:border-purple-600 focus:outline-none transition-colors duration-200"
+                                            className={`w-full px-4 py-3 bg-white text-gray-900 border-2 rounded-xl focus:outline-none transition-colors duration-200 ${formErrors.mobile_number ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-purple-600'}`}
                                             placeholder="+91 1234567890"
                                         />
+                                        {formErrors.mobile_number && (
+                                            <p className="mt-1 text-sm text-red-600">{formErrors.mobile_number}</p>
+                                        )}
                                     </div>
 
                                     {/* Email */}
@@ -365,9 +399,12 @@ const Enquiry = () => {
                                             value={formData.email}
                                             onChange={handleChange}
                                             required
-                                            className="w-full px-4 py-3 bg-white text-gray-900 border-2 border-gray-200 rounded-xl focus:border-purple-600 focus:outline-none transition-colors duration-200"
+                                            className={`w-full px-4 py-3 bg-white text-gray-900 border-2 rounded-xl focus:outline-none transition-colors duration-200 ${formErrors.email ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-purple-600'}`}
                                             placeholder="your.email@example.com"
                                         />
+                                        {formErrors.email && (
+                                            <p className="mt-1 text-sm text-red-600">{formErrors.email}</p>
+                                        )}
                                     </div>
 
                                     {/* Country */}
