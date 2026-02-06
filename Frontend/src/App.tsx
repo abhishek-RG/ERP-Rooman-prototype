@@ -23,6 +23,7 @@ import EmployeeAttendance from './pages/employee/Attendance'
 import EmployeeTasks from './pages/employee/Tasks'
 import EmployeeLeave from './pages/employee/Leave'
 import EmployeePayroll from './pages/employee/Payroll'
+import EmployeeActivities from './pages/employee/activities/Activities'
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard'
@@ -31,6 +32,9 @@ import AdminStudents from './pages/admin/Students'
 import AdminEmployees from './pages/admin/Employees'
 import AdminReports from './pages/admin/Reports'
 import AdminSettings from './pages/admin/Settings'
+import Activities from './pages/admin/activities/Activities'
+import AddActivity from './pages/admin/activities/AddActivity'
+import ActivityDetail from './pages/admin/activities/ActivityDetail'
 
 function App() {
   return (
@@ -126,6 +130,14 @@ function App() {
               </PrivateRoute>
             }
           />
+          <Route
+            path="/employee/activities"
+            element={
+              <PrivateRoute role="employee">
+                <EmployeeActivities />
+              </PrivateRoute>
+            }
+          />
 
           {/* Admin Routes */}
           <Route
@@ -173,6 +185,30 @@ function App() {
             element={
               <PrivateRoute role="admin">
                 <AdminSettings />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/activities"
+            element={
+              <PrivateRoute role="admin">
+                <Activities />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/activities/:id"
+            element={
+              <PrivateRoute role="admin">
+                <ActivityDetail />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/activities/add"
+            element={
+              <PrivateRoute role="admin">
+                <AddActivity />
               </PrivateRoute>
             }
           />

@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 User = get_user_model()
 
@@ -112,6 +113,157 @@ class Report(models.Model):
         return f"{self.report_name} - {self.created_at}"
 
 
+class Activity(models.Model):
+    """
+    Activity model for tracking tasks, meetings, follow-ups, and feedback
+    """
+    
+    # Activity Type Choices
+    ACTIVITY_TYPE_CHOICES = (
+        ('office_meeting', 'Office Meeting (1 Day)'),
+        ('workshop_seminar', 'Workshop/Seminar Follow Up (1 Day)'),
+        ('enquiry_followup', 'Enquiry Follow Up (1 Day)'),
+        ('batch_commencement', 'Batch Commencement Follow Up (1 Day)'),
+        ('fee_followup', 'Fee Follow-up (1 Day)'),
+        ('urgent_task', 'Urgent Task (12 hrs)'),
+        ('house_visit', 'House Visit (2 Days)'),
+        ('lab_problem', 'Lab Problem (1 Day)'),
+        ('request_suggestion', 'Request / Suggestion (1 Day)'),
+        ('normal_task', 'Normal Task (2 Days)'),
+        ('student_info', 'Student Information (1 Day)'),
+        ('student_request', 'Student Request (1 Day)'),
+        ('student_feedback', 'Student Feedback (1 Day)'),
+        ('student_suggestion', 'Student Suggestion (1 Day)'),
+        ('student_complaint', 'Student Complaint (1 Day)'),
+    )
+    
+    # Priority Choices
+    PRIORITY_CHOICES = (
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('urgent', 'Urgent'),
+    )
+    
+    # Activity Status Choices
+    STATUS_CHOICES = (
+        ('planned', 'Planned'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+        ('pending', 'Pending'),
+    )
+    
+    # Activity Info Section
+    executive = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='activities_created'
+    )
+    activity_type = models.CharField(
+        max_length=30,
+        choices=ACTIVITY_TYPE_CHOICES
+    )
+    activity_description = models.TextField(
+        max_length=255,
+        help_text="Maximum 255 characters"
+    )
+    activity_date = models.DateField()
+    
+    # Start Time
+    start_time_hour = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(23)],
+        null=True,
+        blank=True
+    )
+    start_time_minute = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(59)],
+        null=True,
+        blank=True
+    )
+    
+    # Duration
+    duration_hour = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(23)],
+        null=True,
+        blank=True
+    )
+    duration_minute = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(59)],
+        null=True,
+        blank=True
+    )
+    
+    priority = models.CharField(
+        max_length=20,
+        choices=PRIORITY_CHOICES,
+        default='medium'
+    )
+    
+    # Contact Info Section
+    person_to_contact = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True
+    )
+    phone_1 = models.CharField(
+        max_length=15,
+        blank=True,
+        null=True,
+        help_text="Phone number with digits only"
+    )
+    phone_2 = models.CharField(
+        max_length=15,
+        blank=True,
+        null=True,
+        help_text="Optional second phone number"
+    )
+    venue = models.TextField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Maximum 255 characters"
+    )
+    
+    # Feedback Section
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='planned'
+    )
+    feedback = models.TextField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Maximum 255 characters"
+    )
+    
+    # Remarks Section
+    remarks = models.TextField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Maximum 255 characters"
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'activities'
+        ordering = ['-created_at']
+        verbose_name_plural = 'Activities'
+        indexes = [
+            models.Index(fields=['-created_at']),
+            models.Index(fields=['activity_date']),
+            models.Index(fields=['executive']),
+        ]
+    
+    def __str__(self):
+        return f"{self.get_activity_type_display()} - {self.activity_date} ({self.executive.username})"
+
+
 class Enquiry(models.Model):
     """
     Enquiry Model for managing student/customer enquiries
@@ -196,4 +348,3 @@ class Enquiry(models.Model):
     
     def __str__(self):
         return f"{self.name} - {self.center} - {self.enquiry_type}"
-

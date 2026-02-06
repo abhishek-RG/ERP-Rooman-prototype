@@ -2,12 +2,15 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
+from rest_framework.filters import SearchFilter, OrderingFilter
 from django.contrib.auth import get_user_model
-from .models import AdminProfile, SystemSettings, AuditLog, Notification, Report, Enquiry
+from django.db.models import Q
+from .models import AdminProfile, SystemSettings, AuditLog, Notification, Report, Activity, Enquiry
 from .serializers import (
     AdminProfileSerializer, UserManagementSerializer,
     SystemSettingsSerializer, AuditLogSerializer, 
-    NotificationSerializer, ReportSerializer, EnquirySerializer
+    NotificationSerializer, ReportSerializer,
+    ActivitySerializer, ActivityListSerializer, EnquirySerializer
 )
 
 User = get_user_model()
@@ -139,6 +142,205 @@ class ReportViewSet(viewsets.ModelViewSet):
         """Generate a new report"""
         # Report generation logic here
         return Response({'message': 'Report generation started'})
+
+
+class ActivityViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for Activity CRUD operations
+    
+    Endpoints:
+    - GET /api/activities/ - List all activities (with filters)
+    - POST /api/activities/ - Create new activity
+    - GET /api/activities/{id}/ - Retrieve activity details
+    - PUT /api/activities/{id}/ - Update activity
+    - DELETE /api/activities/{id}/ - Delete activity
+    - GET /api/activities/my-activities/ - Get activities for logged-in user
+    """
+    
+    queryset = Activity.objects.all()
+    permission_classes = [IsAuthenticated]
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['activity_description', 'person_to_contact', 'venue']
+    ordering_fields = ['activity_date', 'created_at', 'priority']
+    ordering = ['-created_at']
+    
+    def get_serializer_class(self):
+        """Use different serializer for list vs detail views"""
+        if self.action == 'list':
+            return ActivityListSerializer
+        return ActivitySerializer
+    
+    def get_queryset(self):
+        """
+        Filter activities based on user role and permissions
+        Admin/Executive can see all activities, others can only see their own
+        """
+        user = self.request.user
+        
+        # Admin users can see all activities
+        if hasattr(user, 'role') and user.role == 'admin':
+            return Activity.objects.all()
+        
+        # Other users: show activities they created OR activities created by any admin
+        # (Employees must be able to view activities created by Admins)
+        return Activity.objects.filter(
+            Q(executive=user) | Q(executive__role='admin')
+        )
+    
+    def perform_create(self, serializer):
+        """Auto-assign the current user as the executive if not provided"""
+        # If executive not provided, use current user
+        if 'executive' not in serializer.validated_data:
+            serializer.save(executive=self.request.user)
+        else:
+            serializer.save()
+    
+    def create(self, request, *args, **kwargs):
+        """Create a new activity with enhanced response"""
+        # If executive is not provided, use current user
+        data = request.data.copy()
+        if 'executive' not in data or not data['executive']:
+            data['executive'] = request.user.id
+        
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        
+        return Response(
+            {
+                'data': serializer.data,
+                'message': 'Activity created successfully'
+            },
+            status=status.HTTP_201_CREATED
+        )
+    
+    def update(self, request, *args, **kwargs):
+        """Update activity with enhanced response"""
+        # For non-admin users, only allow updating the `status` field.
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+
+        user = request.user
+        is_admin = hasattr(user, 'role') and user.role == 'admin'
+
+        data = request.data.copy()
+
+        if not is_admin:
+            # Only allow status updates from non-admins
+            allowed = {'status'}
+            # If request contains other fields, ignore them and only keep status
+            data = {k: v for k, v in data.items() if k in allowed}
+            # If there's nothing to update, return bad request
+            if 'status' not in data:
+                return Response({'detail': 'Only status updates are allowed.'}, status=status.HTTP_400_BAD_REQUEST)
+            # Force partial to True for safety
+            partial = True
+
+        serializer = self.get_serializer(instance, data=data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        return Response(
+            {
+                'data': serializer.data,
+                'message': 'Activity updated successfully'
+            },
+            status=status.HTTP_200_OK
+        )
+    
+    def destroy(self, request, *args, **kwargs):
+        """Delete activity with enhanced response"""
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        
+        return Response(
+            {'message': 'Activity deleted successfully'},
+            status=status.HTTP_204_NO_CONTENT
+        )
+    
+    @action(detail=False, methods=['get'])
+    def my_activities(self, request):
+        """
+        Get all activities for the current user (executive)
+        Endpoint: GET /api/activities/my-activities/
+        """
+        activities = Activity.objects.filter(executive=request.user).order_by('-created_at')
+        serializer = ActivityListSerializer(activities, many=True)
+        
+        return Response({
+            'count': activities.count(),
+            'results': serializer.data
+        }, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['get'])
+    def by_date(self, request):
+        """
+        Filter activities by date range
+        Query params: start_date, end_date (YYYY-MM-DD format)
+        Endpoint: GET /api/activities/by-date/?start_date=2026-01-01&end_date=2026-12-31
+        """
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        queryset = self.get_queryset()
+        
+        if start_date:
+            queryset = queryset.filter(activity_date__gte=start_date)
+        
+        if end_date:
+            queryset = queryset.filter(activity_date__lte=end_date)
+        
+        serializer = ActivityListSerializer(
+            queryset.order_by('-activity_date'),
+            many=True
+        )
+        
+        return Response({
+            'count': queryset.count(),
+            'results': serializer.data
+        }, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['get'])
+    def by_status(self, request):
+        """
+        Filter activities by status
+        Query params: status (planned, in_progress, completed, cancelled, pending)
+        Endpoint: GET /api/activities/by-status/?status=completed
+        """
+        status_filter = request.query_params.get('status')
+        
+        queryset = self.get_queryset()
+        
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        
+        serializer = ActivityListSerializer(queryset, many=True)
+        
+        return Response({
+            'count': queryset.count(),
+            'results': serializer.data
+        }, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['get'])
+    def by_priority(self, request):
+        """
+        Filter activities by priority
+        Query params: priority (low, medium, high, urgent)
+        Endpoint: GET /api/activities/by-priority/?priority=high
+        """
+        priority_filter = request.query_params.get('priority')
+        
+        queryset = self.get_queryset()
+        
+        if priority_filter:
+            queryset = queryset.filter(priority=priority_filter)
+        
+        serializer = ActivityListSerializer(queryset, many=True)
+        
+        return Response({
+            'count': queryset.count(),
+            'results': serializer.data
+        }, status=status.HTTP_200_OK)
 
 
 class EnquiryViewSet(viewsets.ModelViewSet):
