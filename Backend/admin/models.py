@@ -348,3 +348,21 @@ class Enquiry(models.Model):
     
     def __str__(self):
         return f"{self.name} - {self.center} - {self.enquiry_type}"
+
+
+class CourseFeeStructure(models.Model):
+    """
+    Model for storing course-wise fees
+    """
+    course_name = models.CharField(max_length=255, unique=True)
+    fee_amount = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        db_table = 'course_fee_structure'
+        verbose_name = 'Course Fee Structure'
+        verbose_name_plural = 'Course Fee Structures'
+        ordering = ['course_name']
+
+    def __str__(self):
+        return f"{self.course_name} - {self.fee_amount}"
+
