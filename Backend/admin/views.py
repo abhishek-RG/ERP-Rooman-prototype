@@ -228,3 +228,92 @@ class EnquiryViewSet(viewsets.ModelViewSet):
         followups = enquiry.followups.all()
         serializer = FollowUpSerializer(followups, many=True)
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['post'], url_path='send-email')
+    def send_email(self, request):
+        """Send HTML email follow-up to enquiry user"""
+        from django.core.mail import EmailMultiAlternatives
+        from django.conf import settings
+        
+        to_email = request.data.get('to_email')
+        subject = request.data.get('subject')
+        message = request.data.get('message')
+        
+        if not to_email or not subject or not message:
+            return Response(
+                {'error': 'to_email, subject, and message are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Create HTML email template
+            html_content = f"""
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>{subject}</title>
+            </head>
+            <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+                <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+                    <tr>
+                        <td align="center">
+                            <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <!-- Header -->
+                                <tr>
+                                    <td style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); padding: 30px; text-align: center;">
+                                        <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;">{subject}</h1>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Content -->
+                                <tr>
+                                    <td style="padding: 40px 30px;">
+                                        <div style="color: #333333; font-size: 16px; line-height: 1.6;">
+                                            {message.replace(chr(10), '<br>')}
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Footer -->
+                                <tr>
+                                    <td style="background-color: #f9f9f9; padding: 20px 30px; text-align: center; border-top: 1px solid #eeeeee;">
+                                        <p style="color: #888888; font-size: 14px; margin: 0;">
+                                            © 2026 Rooman Technologies. All rights reserved.
+                                        </p>
+                                        <p style="color: #888888; font-size: 12px; margin: 10px 0 0 0;">
+                                            This email was sent to {to_email}
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </body>
+            </html>
+            """
+            
+            # Create plain text version as fallback
+            text_content = message
+            
+            # Create email with both HTML and plain text versions
+            email = EmailMultiAlternatives(
+                subject=subject,
+                body=text_content,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[to_email]
+            )
+            email.attach_alternative(html_content, "text/html")
+            email.send(fail_silently=False)
+            
+            return Response({
+                'success': True,
+                'message': 'Email sent successfully'
+            })
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

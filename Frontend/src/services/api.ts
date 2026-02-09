@@ -74,6 +74,9 @@ export const enquiryAPI = {
   },
   getFollowUps: (enquiryId: number | string) => {
     return api.get(`/admin/enquiry/${enquiryId}/followups/`)
+  },
+  sendEmail: (emailData: { to_email: string, subject: string, message: string }) => {
+    return api.post('/admin/enquiry/send-email/', emailData)
   }
 }
 

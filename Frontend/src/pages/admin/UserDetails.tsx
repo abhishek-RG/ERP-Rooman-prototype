@@ -30,6 +30,12 @@ const UserDetails = () => {
   const [newInstallmentDueDate, setNewInstallmentDueDate] = useState('')
   const [hasFinancialDetails, setHasFinancialDetails] = useState(false)
 
+  // Email Follow-up State
+  const [emailTemplate, setEmailTemplate] = useState('')
+  const [emailSubject, setEmailSubject] = useState('')
+  const [emailMessage, setEmailMessage] = useState('')
+  const [emailSending, setEmailSending] = useState(false)
+
   // Fetch the enquiry and follow-ups when component mounts
   useEffect(() => {
     console.log('🔍 UserDetails useEffect triggered for id:', id)
@@ -222,6 +228,104 @@ const UserDetails = () => {
       })
       alert(`Successfully converted ${enquiry.name} to a Student!`)
       navigate('/admin/students')
+    }
+  }
+
+  // Email Templates
+  const emailTemplates: { [key: string]: { subject: string, message: string } } = {
+    'course-details': {
+      subject: `Course Information - ${enquiry.course || 'Our Courses'}`,
+      message: `Dear ${enquiry.name},
+Thank you for your interest in our courses. As requested, please find the course details below:
+
+[Course information will be provided here]
+
+If you have any questions or need further clarification, please feel free to reply to this email — we will be happy to assist you.
+
+We look forward to supporting you in your learning journey.
+
+Best regards,
+Rooman Technologies`
+    },
+    'fee-reminder': {
+      subject: 'Fee Payment Reminder',
+      message: `Dear ${enquiry.name},
+This is a friendly reminder regarding your pending course fee payment. We kindly request you to complete the payment at your earliest convenience to ensure a smooth continuation of your admission process and to secure your enrollment without any delays.
+
+If you need any assistance with the payment process, require payment details, or have any concerns, please feel free to reply to this email — our team will be happy to support you.
+
+Thank you, and we look forward to welcoming you soon.
+
+Best regards,
+Rooman Technologies`
+    },
+    'admission-followup': {
+      subject: 'Follow-up on Your Admission',
+      message: `Dear ${enquiry.name},
+
+We hope you are doing well. We wanted to personally follow up regarding your ongoing admission process and check if you require any assistance or clarification at this stage. Our team is here to support you with any information related to course details, documentation, next steps, or the enrollment process.
+
+If you have any questions or need guidance, please feel free to reply to this email or contact us directly — we will be happy to help you move forward smoothly.
+
+We look forward to assisting you and supporting you throughout your admission journey.
+
+Best regards,
+Rooman Technologies`
+    },
+    'general-followup': {
+      subject: 'Following up on your enquiry',
+      message: `Dear ${enquiry.name},
+
+Thank you for your interest in our programs. We just wanted to check in with you and see if you need any additional information or assistance at this stage.
+
+Please feel free to reach out to us if you have any questions or would like further guidance — we are always happy to help.
+
+We look forward to hearing from you.
+
+Best regards,
+Rooman Technologies`
+    }
+  }
+
+  const handleEmailTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const templateKey = e.target.value
+    setEmailTemplate(templateKey)
+    if (templateKey && emailTemplates[templateKey]) {
+      const template = emailTemplates[templateKey]
+      setEmailSubject(template.subject)
+      setEmailMessage(template.message)
+    }
+  }
+
+  const handleSendEmail = async () => {
+    if (!emailSubject || !emailMessage) {
+      alert('Please fill in subject and message')
+      return
+    }
+
+    if (!enquiry.email) {
+      alert('No email address found for this enquiry')
+      return
+    }
+
+    setEmailSending(true)
+    try {
+      await enquiryAPI.sendEmail({
+        to_email: enquiry.email,
+        subject: emailSubject,
+        message: emailMessage
+      })
+
+      // Clear fields on success
+      setEmailSubject('')
+      setEmailMessage('')
+      setEmailTemplate('')
+      alert('Email sent successfully!')
+    } catch (error) {
+      console.error('Error sending email:', error)
+      alert('Failed to send email. Please try again.')
+    } finally {
+      setEmailSending(false)
     }
   }
 
@@ -585,6 +689,72 @@ const UserDetails = () => {
                       </div>
                       <div className="flex gap-3">
                         <Button onClick={handleSaveFollowUp} disabled={!followUpNotes}>Save Follow-up</Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Send Email Follow-up Section */}
+                  <div className="bg-white p-4 rounded-md border border-gray-200 shadow-sm mb-4">
+                    <h5 className="text-sm font-medium mb-3">📧 Send Email Follow-up</h5>
+
+                    <div className="grid grid-cols-1 gap-3">
+                      {/* Template Selection */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Email Template (Optional)</label>
+                        <select
+                          value={emailTemplate}
+                          onChange={handleEmailTemplateChange}
+                          className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm"
+                        >
+                          <option value="">Select a template...</option>
+                          <option value="course-details">Course Details</option>
+                          <option value="fee-reminder">Fee Reminder</option>
+                          <option value="admission-followup">Admission Follow-up</option>
+                          <option value="general-followup">General Follow-up</option>
+                        </select>
+                      </div>
+
+                      {/* To Email (read-only) */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">To Email</label>
+                        <Input
+                          value={enquiry.email || 'No email provided'}
+                          readOnly
+                          className="bg-gray-50 text-gray-600"
+                        />
+                      </div>
+
+                      {/* Subject */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Subject</label>
+                        <Input
+                          value={emailSubject}
+                          onChange={(e) => setEmailSubject(e.target.value)}
+                          placeholder="Enter email subject"
+                        />
+                      </div>
+
+                      {/* Message */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Message</label>
+                        <textarea
+                          rows={6}
+                          value={emailMessage}
+                          onChange={(e) => setEmailMessage(e.target.value)}
+                          className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                          placeholder="Enter email message..."
+                        />
+                      </div>
+
+                      {/* Send Button */}
+                      <div>
+                        <Button
+                          onClick={handleSendEmail}
+                          disabled={emailSending || !emailSubject || !emailMessage || !enquiry.email}
+                          className="bg-blue-600 text-white hover:bg-blue-700"
+                        >
+                          {emailSending ? '📧 Sending...' : '📧 Send Email Follow-up'}
+                        </Button>
                       </div>
                     </div>
                   </div>
