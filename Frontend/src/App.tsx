@@ -28,10 +28,12 @@ import EmployeeActivities from './pages/employee/activities/Activities'
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminUsers from './pages/admin/Users'
+import AdminEnquiries from './pages/admin/Enquiries'
 import AdminStudents from './pages/admin/Students'
 import AdminEmployees from './pages/admin/Employees'
 import AdminReports from './pages/admin/Reports'
 import AdminSettings from './pages/admin/Settings'
+import AdminUserDetails from './pages/admin/UserDetails'
 import Activities from './pages/admin/activities/Activities'
 import AddActivity from './pages/admin/activities/AddActivity'
 import ActivityDetail from './pages/admin/activities/ActivityDetail'
@@ -152,10 +154,26 @@ function App() {
             }
           />
           <Route
+            path="/admin/enquiries"
+            element={
+              <PrivateRoute role="admin">
+                <AdminEnquiries />
+              </PrivateRoute>
+            }
+          />
+          <Route
             path="/admin/users"
             element={
               <PrivateRoute role="admin">
                 <AdminUsers />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/users/details/:id"
+            element={
+              <PrivateRoute role="admin">
+                <AdminUserDetails />
               </PrivateRoute>
             }
           />
@@ -175,6 +193,7 @@ function App() {
               </PrivateRoute>
             }
           />
+
           <Route
             path="/admin/reports"
             element={

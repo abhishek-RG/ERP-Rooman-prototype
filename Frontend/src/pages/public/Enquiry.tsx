@@ -15,6 +15,8 @@ const Enquiry = () => {
         organisation_name: '',
         designation: '',
         total_work_experience: '',
+        reason_for_enquiry: '',
+        course: '',
         mobile_number: '',
         email: '',
         country: 'India',
@@ -59,6 +61,8 @@ const Enquiry = () => {
                     organisation_name: '',
                     designation: '',
                     total_work_experience: '',
+                    reason_for_enquiry: '',
+                    course: '',
                     mobile_number: '',
                     email: '',
                     country: 'India',
@@ -258,6 +262,88 @@ const Enquiry = () => {
                                             className="w-full px-4 py-3 bg-white text-gray-900 border-2 border-gray-200 rounded-xl focus:border-purple-600 focus:outline-none transition-colors duration-200"
                                             placeholder="e.g., B.Tech, MBA, etc."
                                         />
+                                    </div>
+
+                                    {/* Reason for Enquiry */}
+                                    <div>
+                                        <label htmlFor="reason_for_enquiry" className="block text-sm font-semibold text-gray-700 mb-2">
+                                            Reason for Enquiry
+                                        </label>
+                                        <select
+                                            id="reason_for_enquiry"
+                                            name="reason_for_enquiry"
+                                            value={formData.reason_for_enquiry}
+                                            onChange={handleChange}
+                                            className="w-full px-4 py-3 bg-white text-gray-900 border-2 border-gray-200 rounded-xl focus:border-purple-600 focus:outline-none transition-colors duration-200"
+                                        >
+                                            <option value="">Select Reason</option>
+                                            <option value="for_knowledge">For knowledge</option>
+                                            <option value="internship_or_project">Internship or project</option>
+                                            <option value="upskilling">Upskilling</option>
+                                            <option value="placements">Placements</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Course */}
+                                    <div>
+                                        <label htmlFor="course" className="block text-sm font-semibold text-gray-700 mb-2">
+                                            Course
+                                        </label>
+                                        <select
+                                            id="course"
+                                            name="course"
+                                            value={formData.course}
+                                            onChange={handleChange}
+                                            className="w-full px-4 py-3 bg-white text-gray-900 border-2 border-gray-200 rounded-xl focus:border-purple-600 focus:outline-none transition-colors duration-200"
+                                        >
+                                            <option value="">Select Course</option>
+                                            <option value="advanced_java_005">Advanced Java (005)</option>
+                                            <option value="ai_in_cybersecurity_49">AI in Cybersecurity (49)</option>
+                                            <option value="application_developer_web_mobile_fsd">Application Developer Web and Mobile (FSD)</option>
+                                            <option value="aws_012">AWS (012)</option>
+                                            <option value="aws_internship">AWS Internship (Internship-1)</option>
+                                            <option value="aws_level_2">AWS Level 2 (AWS Advanced)</option>
+                                            <option value="ccna_009">CCNA (009)</option>
+                                            <option value="ccnp_23">CCNP (23)</option>
+                                            <option value="ccnp_enarsi">CCNP-ENARSI (CCNP 23.1)</option>
+                                            <option value="ccnp_encor">CCNP-ENCOR (CCNP 23)</option>
+                                            <option value="core_java_004">Core Java (004)</option>
+                                            <option value="core_java_pap">Core Java (PAP) (PAP-1)</option>
+                                            <option value="cyber_security_10">Cyber Security (10)</option>
+                                            <option value="data_analytics_internship">Data Analytics Internship (Internship-2)</option>
+                                            <option value="data_science_ai_28">Data Science & AI (28)</option>
+                                            <option value="data_science_business_analytics_001">Data Science & Business Analytics (001)</option>
+                                            <option value="data_science_machine_learning_019">Data Science & Machine Learning (019)</option>
+                                            <option value="ethical_hacking_011">Ethical Hacking (011)</option>
+                                            <option value="front_end_technologies_006">Front End Technologies (006)</option>
+                                            <option value="full_stack_cloud_devops">Full Stack Cloud & DevOps (FutureAcad-04)</option>
+                                            <option value="full_stack_cyber_security">Full Stack Cyber Security (FutureAcad-03)</option>
+                                            <option value="full_stack_development_python_26">Full Stack Development – Python (26)</option>
+                                            <option value="full_stack_software_developer_internship">Full Stack Software Developer Internship (Internship-3)</option>
+                                            <option value="full_stack_software_developer_genai">Full Stack Software Developer with GenAI (FutureAcad-06)</option>
+                                            <option value="hardware_and_networking_37">Hardware and Networking (37)</option>
+                                            <option value="interview_prep_program">Interview Prep Program (Interview-1)</option>
+                                            <option value="java_frameworks_27">Java Frameworks (27)</option>
+                                            <option value="machine_learning_002">Machine Learning (002)</option>
+                                            <option value="master_data_analytics_ml">Master in Data Analytics & Machine Learning (FutureAcad-02)</option>
+                                            <option value="master_nextgen_ai_data_science">Master in NextGen AI & Data Science (FutureAcad-01)</option>
+                                            <option value="mysql_nosql_014">MySQL / NoSQL (014)</option>
+                                            <option value="networking_cyber_security_22">Networking & Cyber Security (22)</option>
+                                            <option value="networking_essentials">Networking Essentials (Net-Ess)</option>
+                                            <option value="professional_cloud_devops">Professional in Cloud and DevOps (Professional-08)</option>
+                                            <option value="professional_core_it_ops">Professional in Core IT Ops: Network, Server & Cloud (Professional-01)</option>
+                                            <option value="professional_cyber_security_expert">Professional in Cyber Security Expert (Professional-06)</option>
+                                            <option value="professional_data_analytics">Professional in Data Analytics (Professional-03)</option>
+                                            <option value="professional_generative_ai_mlops">Professional in Generative AI and MLOps (Professional-05)</option>
+                                            <option value="professional_ml_deep_learning">Professional in Machine Learning & Deep Learning (Professional-04)</option>
+                                            <option value="professional_web_development_dsa">Professional in Web Development & DSA (Professional-02)</option>
+                                            <option value="python_frameworks_008">Python Frameworks (008)</option>
+                                            <option value="python_programming_007">Python Programming (007)</option>
+                                            <option value="server_admin_cloud_computing_21">Server Admin & Cloud Computing (21)</option>
+                                            <option value="soft_skills_43">Soft Skills (43)</option>
+                                            <option value="vmware_essentials_13">VMWare Essentials (13)</option>
+                                            <option value="windows_server_administrator_24">Windows Server Administrator (24)</option>
+                                        </select>
                                     </div>
 
                                     {/* Status */}
