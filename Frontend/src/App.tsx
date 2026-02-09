@@ -40,6 +40,8 @@ import ActivityDetail from './pages/admin/activities/ActivityDetail'
 import InvoiceDashboard from './pages/admin/invoices/InvoiceDashboard'
 import UpdateInvoice from './pages/admin/invoices/UpdateInvoice'
 import AddReceipt from './pages/admin/invoices/AddReceipt'
+import Batches from './pages/admin/Batches'
+import Sessions from './pages/admin/Sessions'
 
 function App() {
   return (
@@ -166,6 +168,22 @@ function App() {
             element={
               <PrivateRoute role="admin">
                 <AdminUsers />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/batches"
+            element={
+              <PrivateRoute role="admin">
+                <Batches />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/sessions"
+            element={
+              <PrivateRoute role="admin">
+                <Sessions />
               </PrivateRoute>
             }
           />
