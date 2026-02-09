@@ -47,7 +47,7 @@ const InvoiceDashboard = () => {
     }
 
     const clearFilter = () => {
-        navigate('/admin/invoices', { replace: true, state: {} })
+        navigate('/admin/students/invoices', { replace: true, state: {} })
         window.location.reload()
     }
 

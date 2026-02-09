@@ -52,11 +52,17 @@ const UserCard = ({ user, onDelete, onView, isLoading = false }: UserCardProps) 
 
     // Feature: Redirect students to Invoice Dashboard
     if (user.role === 'student') {
-      navigate('/admin/invoices', { state: { highlightUserId: user.id } })
+      navigate('/admin/students/invoices', { state: { highlightUserId: user.id } })
       return
     }
 
-    // Fallback: Download invoice for other roles (e.g. employees)
+    // Feature: Redirect employees to Salary Dashboard
+    if (user.role === 'employee') {
+      navigate('/admin/employees/salary', { state: { highlightUserId: user.id } })
+      return
+    }
+
+    // Fallback: Download invoice for other roles (if any)
     try {
       await userManagementService.downloadInvoice(user.id)
     } catch (err) {
@@ -122,7 +128,7 @@ const UserCard = ({ user, onDelete, onView, isLoading = false }: UserCardProps) 
             onClick={handleInvoiceAction}
             disabled={isLoading}
           >
-            Invoice
+            {user.role === 'employee' ? 'Salary' : 'Invoice'}
           </Button>
           {onView && (
             <Button

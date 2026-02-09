@@ -20,12 +20,12 @@ from .serializers import (
     NotificationSerializer, ReportSerializer,
     ActivitySerializer, ActivityListSerializer, EnquirySerializer,
     StudentInvoiceListSerializer, StudentInvoiceSerializer, StudentReceiptSerializer,
-    CourseFeeStructureSerializer
+    CourseFeeStructureSerializer, EmployeeSalaryDashboardSerializer
 )
 from student.models import Student
 from .models import (
     AdminProfile, SystemSettings, AuditLog, Notification, Report, Activity, Enquiry,
-    StudentInvoice, StudentReceipt, CourseFeeStructure
+    StudentInvoice, StudentReceipt, CourseFeeStructure, EmployeeSalaryStatus
 )
 
 
@@ -856,4 +856,52 @@ class CourseFeeStructureViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAdminUser]
     serializer_class = CourseFeeStructureSerializer
     queryset = CourseFeeStructure.objects.all()
+
+
+class EmployeeSalaryDashboardViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet to manage Employee Salary Status
+    READ-ONLY base, with custom actions for updates
+    """
+    def get_queryset(self):
+        from employee.models import Employee
+        qs = Employee.objects.all().select_related('user', 'salary_status').order_by('-created_at')
+        user_id = self.request.query_params.get('user_id')
+        if user_id:
+            qs = qs.filter(user_id=user_id)
+        return qs
+    serializer_class = EmployeeSalaryDashboardSerializer
+    permission_classes = [IsAdminUser]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['user__first_name', 'user__last_name', 'user__email', 'employee_id']
+
+    @action(detail=True, methods=['post'])
+    def mark_paid(self, request, pk=None):
+        employee = self.get_object()
+        status_obj, created = EmployeeSalaryStatus.objects.get_or_create(employee=employee)
+        status_obj.status = 'Paid'
+        status_obj.save()
+        return Response({'status': 'Paid', 'message': f'Salary marked as Paid for {employee.user.get_full_name()}'})
+
+    @action(detail=True, methods=['post'])
+    def mark_unpaid(self, request, pk=None):
+        employee = self.get_object()
+        status_obj, created = EmployeeSalaryStatus.objects.get_or_create(employee=employee)
+        status_obj.status = 'Pending'
+        status_obj.save()
+        return Response({'status': 'Pending', 'message': f'Salary marked as Pending for {employee.user.get_full_name()}'})
+
+    @action(detail=False, methods=['post'])
+    def mark_all_paid(self, request):
+        # Mark all employees as Paid
+        from employee.models import Employee
+        employees = Employee.objects.all()
+        count = 0
+        for emp in employees:
+            obj, created = EmployeeSalaryStatus.objects.get_or_create(employee=emp)
+            if obj.status != 'Paid':
+                obj.status = 'Paid'
+                obj.save()
+                count += 1
+        return Response({'message': f'Successfully marked {count} employees as Paid'})
 

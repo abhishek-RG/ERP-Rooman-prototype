@@ -5,7 +5,7 @@ from .views import (
     SystemSettingsViewSet, AuditLogViewSet,
     NotificationViewSet, ReportViewSet, EnquiryViewSet,
     InvoiceDashboardViewSet, StudentInvoiceViewSet, StudentReceiptViewSet,
-    CourseFeeStructureViewSet
+    CourseFeeStructureViewSet, EmployeeSalaryDashboardViewSet
 )
 
 router = DefaultRouter()
@@ -20,6 +20,7 @@ router.register(r'invoices', InvoiceDashboardViewSet, basename='invoice-dashboar
 router.register(r'student-invoices', StudentInvoiceViewSet, basename='student-invoice')
 router.register(r'student-receipts', StudentReceiptViewSet, basename='student-receipt')
 router.register(r'course-fees', CourseFeeStructureViewSet, basename='course-fee')
+router.register(r'salary-dashboard', EmployeeSalaryDashboardViewSet, basename='salary-dashboard')
 
 urlpatterns = [
     path('', include(router.urls)),

@@ -169,7 +169,7 @@ const UpdateInvoice = () => {
             } else {
                 await api.post('/admin/student-invoices/', payload)
             }
-            navigate('/admin/invoices')
+            navigate('/admin/students/invoices')
         } catch (error: any) {
             const msg = error.response?.data ? JSON.stringify(error.response.data) : error.message
             alert(`Failed to save invoice: ${msg}`)
@@ -311,7 +311,7 @@ const UpdateInvoice = () => {
                         </div>
 
                         <div className="flex gap-4 pt-4 border-t border-gray-200">
-                            <Button type="button" variant="secondary" onClick={() => navigate('/admin/invoices')}>Cancel</Button>
+                            <Button type="button" variant="secondary" onClick={() => navigate('/admin/students/invoices')}>Cancel</Button>
                             <Button type="submit" variant="primary">Save Invoice</Button>
                         </div>
                     </form>
