@@ -427,7 +427,6 @@ class Enquiry(models.Model):
         return f"{self.name} - {self.center} - {self.enquiry_type}"
 
 
-<<<<<<< HEAD
 class FollowUp(models.Model):
     """Model to store follow-up records for enquiries"""
     OUTCOME_CHOICES = [
@@ -451,7 +450,7 @@ class FollowUp(models.Model):
     
     def __str__(self):
         return f"Follow-up for {self.enquiry.name} on {self.date}"
-=======
+
 class CourseFeeStructure(models.Model):
     """
     Model for storing course-wise fees
@@ -538,5 +537,3 @@ class StudentReceipt(models.Model):
             from datetime import datetime
             self.receipt_number = f"RCT{datetime.now().strftime('%Y%m')}{random.randint(1000, 9999)}"
         super().save(*args, **kwargs)
-
->>>>>>> 373254d2d0e18f8a1dc6580bcee3b38c56e49ff6

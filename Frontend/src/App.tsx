@@ -32,16 +32,13 @@ import AdminStudents from './pages/admin/Students'
 import AdminEmployees from './pages/admin/Employees'
 import AdminReports from './pages/admin/Reports'
 import AdminSettings from './pages/admin/Settings'
-<<<<<<< HEAD
 import AdminUserDetails from './pages/admin/UserDetails'
-=======
 import Activities from './pages/admin/activities/Activities'
 import AddActivity from './pages/admin/activities/AddActivity'
 import ActivityDetail from './pages/admin/activities/ActivityDetail'
 import InvoiceDashboard from './pages/admin/invoices/InvoiceDashboard'
 import UpdateInvoice from './pages/admin/invoices/UpdateInvoice'
 import AddReceipt from './pages/admin/invoices/AddReceipt'
->>>>>>> 373254d2d0e18f8a1dc6580bcee3b38c56e49ff6
 
 function App() {
   return (
@@ -187,7 +184,7 @@ function App() {
               </PrivateRoute>
             }
           />
-          
+
           <Route
             path="/admin/reports"
             element={

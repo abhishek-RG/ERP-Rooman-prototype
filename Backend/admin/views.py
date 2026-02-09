@@ -17,21 +17,17 @@ from .models import AdminProfile, SystemSettings, AuditLog, Notification, Report
 from .serializers import (
     AdminProfileSerializer, UserManagementSerializer,
     SystemSettingsSerializer, AuditLogSerializer, 
-<<<<<<< HEAD
     NotificationSerializer, ReportSerializer, EnquirySerializer,
-    FollowUpSerializer
-=======
-    NotificationSerializer, ReportSerializer,
-    ActivitySerializer, ActivityListSerializer, EnquirySerializer,
+    FollowUpSerializer, ActivitySerializer, ActivityListSerializer,
     StudentInvoiceListSerializer, StudentInvoiceSerializer, StudentReceiptSerializer,
     CourseFeeStructureSerializer
 )
 from student.models import Student
 from .models import (
-    AdminProfile, SystemSettings, AuditLog, Notification, Report, Activity, Enquiry,
+    AdminProfile, SystemSettings, AuditLog, Notification, Report, Activity, Enquiry, FollowUp,
     StudentInvoice, StudentReceipt, CourseFeeStructure
->>>>>>> 373254d2d0e18f8a1dc6580bcee3b38c56e49ff6
 )
+
 
 
 User = get_user_model()
@@ -514,7 +510,6 @@ class EnquiryViewSet(viewsets.ModelViewSet):
             {'message': 'Failed to submit enquiry', 'errors': serializer.errors},
             status=status.HTTP_400_BAD_REQUEST
         )
-<<<<<<< HEAD
     
     @action(detail=True, methods=['patch'], url_path='update-status')
     def update_status(self, request, pk=None):

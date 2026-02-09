@@ -347,14 +347,13 @@ class EnquirySerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
-<<<<<<< HEAD
 
 class FollowUpSerializer(serializers.ModelSerializer):
     class Meta:
         model = FollowUp
         fields = ['id', 'enquiry', 'date', 'notes', 'outcome', 'next_follow_up_date', 'created_at']
         read_only_fields = ['id', 'created_at']
-=======
+
 class StudentInvoiceListSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='user.get_full_name', read_only=True)
     username = serializers.CharField(source='user.username', read_only=True)
@@ -453,5 +452,3 @@ class StudentReceiptSerializer(serializers.ModelSerializer):
         fields = ['id', 'invoice', 'invoice_number', 'student_name', 'receipt_number', 'receipt_date', 
                   'amount', 'category', 'payment_mode', 'transaction_ref', 'notes', 'created_by', 'created_by_name']
         read_only_fields = ['receipt_number', 'receipt_date', 'created_by']
->>>>>>> 373254d2d0e18f8a1dc6580bcee3b38c56e49ff6
-
