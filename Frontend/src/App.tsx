@@ -28,6 +28,7 @@ import EmployeeActivities from './pages/employee/activities/Activities'
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminUsers from './pages/admin/Users'
+import AdminEnquiries from './pages/admin/Enquiries'
 import AdminStudents from './pages/admin/Students'
 import AdminEmployees from './pages/admin/Employees'
 import AdminReports from './pages/admin/Reports'
@@ -149,6 +150,14 @@ function App() {
             element={
               <PrivateRoute role="admin">
                 <AdminDashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/enquiries"
+            element={
+              <PrivateRoute role="admin">
+                <AdminEnquiries />
               </PrivateRoute>
             }
           />
