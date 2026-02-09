@@ -5,7 +5,7 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import { useStudentStore } from '../../store/studentStore'
-import { useEnquiryStore, type EnquiryStatus, Enquiry, FollowUp } from '../../store/enquiryStore'
+import { useEnquiryStore, type EnquiryStatus, FollowUp } from '../../store/enquiryStore'
 import { enquiryAPI } from '../../services/api'
 
 const UserDetails = () => {

@@ -1,0 +1,177 @@
+import { useState, useEffect } from 'react'
+import Layout from '../../../components/layout/Layout'
+import { activityService } from '../../../services/activityService'
+import { Activity } from '../../../types/activity'
+import Card from '../../../components/ui/Card'
+import LoadingSpinner from '../../../components/ui/LoadingSpinner'
+
+const EmployeeActivities = () => {
+  const [activities, setActivities] = useState<Activity[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const fetch = async () => {
+    try {
+      const data = await activityService.getActivities()
+      setActivities(data.results)
+    } catch (err) {
+      // Handle error silently
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetch()
+    const interval = setInterval(fetch, 5000) // poll every 5s
+    return () => clearInterval(interval)
+  }, [])
+
+  const [updatingMap, setUpdatingMap] = useState<Record<number, boolean>>({})
+
+  const updateStatus = async (id: number, status: string) => {
+    // prevent duplicate clicks
+    if (updatingMap[id]) return
+
+    // Optimistically update UI
+    setActivities((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)))
+    setUpdatingMap((m) => ({ ...m, [id]: true }))
+
+    try {
+      await activityService.updateActivity(id, { status })
+      // backend updated; nothing else needed as optimistic UI is applied
+    } catch (err) {
+      // revert on error
+      await fetch()
+    } finally {
+      setUpdatingMap((m) => ({ ...m, [id]: false }))
+    }
+  }
+
+  const getStatusColor = (status: string): string => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-100 text-green-800'
+      case 'in_progress':
+        return 'bg-blue-100 text-blue-800'
+      case 'planned':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'cancelled':
+        return 'bg-red-100 text-red-800'
+      case 'pending':
+        return 'bg-orange-100 text-orange-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const getPriorityColor = (priority: string): string => {
+    switch (priority) {
+      case 'urgent':
+        return 'text-red-600 font-bold'
+      case 'high':
+        return 'text-orange-600 font-semibold'
+      case 'medium':
+        return 'text-yellow-600'
+      case 'low':
+        return 'text-green-600'
+      default:
+        return 'text-gray-600'
+    }
+  }
+
+  return (
+    <Layout role="employee">
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Activities</h1>
+          <p className="mt-2 text-gray-600">Activities assigned to you</p>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <LoadingSpinner />
+          </div>
+        ) : activities.length === 0 ? (
+          <Card>
+            <div className="text-center py-12">
+              <p className="text-gray-500">No activities found</p>
+            </div>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {activities.map((activity) => (
+              <Card key={activity.id}>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {activity.activity_type_display}
+                      </h3>
+                      <span
+                        className={`text-xs font-medium px-2 py-1 rounded ${getStatusColor(
+                          activity.status
+                        )}`}
+                      >
+                        {activity.status_display}
+                      </span>
+                      <span className={`text-sm font-medium ${getPriorityColor(activity.priority)}`}>
+                        {activity.priority_display}
+                      </span>
+                    </div>
+
+                    <p className="text-gray-700 text-sm mb-2 line-clamp-3">
+                      {activity.activity_description.length > 180
+                        ? activity.activity_description.slice(0, 180) + '...'
+                        : activity.activity_description}
+                    </p>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
+                      <div>
+                        <span className="font-medium">Date:</span> {activity.activity_date}
+                      </div>
+                      <div>
+                        <span className="font-medium">Executive:</span>{' '}
+                        {activity.executive_details.first_name} {activity.executive_details.last_name}
+                      </div>
+                    </div>
+
+                    {activity.feedback && (
+                      <p className="mt-2 text-sm text-gray-600">
+                        <span className="font-medium">Feedback:</span> {activity.feedback}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      className={`px-3 py-1 text-sm rounded ${
+                        activity.status === 'completed'
+                          ? 'bg-green-600 text-white'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}
+                      disabled={updatingMap[activity.id] || activity.status === 'completed'}
+                      onClick={() => updateStatus(activity.id, 'completed')}
+                    >
+                      Completed
+                    </button>
+
+                    <button
+                      className={`px-3 py-1 text-sm rounded ${
+                        activity.status === 'pending' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-800'
+                      }`}
+                      disabled={updatingMap[activity.id] || activity.status === 'pending'}
+                      onClick={() => updateStatus(activity.id, 'pending')}
+                    >
+                      Pending
+                    </button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </Layout>
+  )
+}
+
+export default EmployeeActivities

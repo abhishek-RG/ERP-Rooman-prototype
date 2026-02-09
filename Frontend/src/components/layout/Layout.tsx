@@ -7,6 +7,7 @@ import {
   ChartBarIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
+  CheckCircleIcon,
 } from '@heroicons/react/24/outline'
 
 interface NavItem {
@@ -35,12 +36,14 @@ const getNavItems = (role: string): NavItem[] => {
       { name: 'Tasks', path: '/employee/tasks', icon: DocumentTextIcon },
       { name: 'Leave', path: '/employee/leave', icon: DocumentTextIcon },
       { name: 'Payroll', path: '/employee/payroll', icon: ChartBarIcon },
+      { name: 'Activities', path: '/employee/activities', icon: CheckCircleIcon },
     ],
     admin: [
       { name: 'Dashboard', path: '/admin/dashboard', icon: HomeIcon },
       { name: 'Enquiries', path: '/admin/users', icon: UserGroupIcon },
       { name: 'Students', path: '/admin/students', icon: UserGroupIcon },
       { name: 'Employees', path: '/admin/employees', icon: UserGroupIcon },
+      { name: 'Activities', path: '/admin/activities', icon: CheckCircleIcon },
       { name: 'Reports', path: '/admin/reports', icon: ChartBarIcon },
       { name: 'Settings', path: '/admin/settings', icon: Cog6ToothIcon },
     ],
