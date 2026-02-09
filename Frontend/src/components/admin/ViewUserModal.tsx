@@ -32,6 +32,8 @@ interface ViewUserModalProps {
   onDownloadInvoice?: (userId: number) => void
 }
 
+import { userManagementService } from '../../services/userManagementService'
+
 const ViewUserModal = ({ isOpen, onClose, userId, onDownloadInvoice }: ViewUserModalProps) => {
   const [user, setUser] = useState<UserDetail | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -44,17 +46,13 @@ const ViewUserModal = ({ isOpen, onClose, userId, onDownloadInvoice }: ViewUserM
   }, [isOpen, userId])
 
   const fetchUserDetails = async () => {
+    if (!userId) return
+
     try {
       setIsLoading(true)
       setError(null)
-      const response = await fetch(`/api/admin/users/${userId}/`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-        },
-      })
-      if (!response.ok) throw new Error('Failed to load user')
-      const data = await response.json()
-      setUser(data)
+      const data = await userManagementService.getUser(userId)
+      setUser(data as unknown as UserDetail)
     } catch (err) {
       setError('Could not load user details')
       console.error(err)
@@ -118,19 +116,17 @@ const ViewUserModal = ({ isOpen, onClose, userId, onDownloadInvoice }: ViewUserM
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-500 font-medium">Role</p>
-                    <p className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
-                      user.role === 'student' ? 'bg-blue-100 text-blue-800' :
-                      user.role === 'employee' ? 'bg-green-100 text-green-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
+                    <p className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${user.role === 'student' ? 'bg-blue-100 text-blue-800' :
+                        user.role === 'employee' ? 'bg-green-100 text-green-800' :
+                          'bg-red-100 text-red-800'
+                      }`}>
                       {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500 font-medium">Status</p>
-                    <p className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
-                      user.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
+                    <p className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${user.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
                       {user.is_active ? 'Active' : 'Inactive'}
                     </p>
                   </div>

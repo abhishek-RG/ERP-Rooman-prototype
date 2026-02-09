@@ -1,20 +1,33 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.http import HttpResponse
 import io
 from datetime import datetime
+from datetime import datetime
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.lib import colors
 from .models import AdminProfile, SystemSettings, AuditLog, Notification, Report, Activity, Enquiry
 from .serializers import (
     AdminProfileSerializer, UserManagementSerializer,
     SystemSettingsSerializer, AuditLogSerializer, 
     NotificationSerializer, ReportSerializer,
-    ActivitySerializer, ActivityListSerializer, EnquirySerializer
+    ActivitySerializer, ActivityListSerializer, EnquirySerializer,
+    StudentInvoiceListSerializer, StudentInvoiceSerializer, StudentReceiptSerializer,
+    CourseFeeStructureSerializer
 )
+from student.models import Student
+from .models import (
+    AdminProfile, SystemSettings, AuditLog, Notification, Report, Activity, Enquiry,
+    StudentInvoice, StudentReceipt, CourseFeeStructure
+)
+
 
 User = get_user_model()
 
@@ -93,6 +106,7 @@ class UserManagementViewSet(viewsets.ModelViewSet):
                         'student_id': getattr(student, 'student_id', None),
                         'center': getattr(student, 'center', None),
                         'enrollment_date': getattr(student, 'enrollment_date', None),
+                        'courses': [e.course.course_name for e in student.enrollments.all()]
                     })
         except Exception:
             pass
@@ -484,4 +498,358 @@ class EnquiryViewSet(viewsets.ModelViewSet):
             {'message': 'Failed to submit enquiry', 'errors': serializer.errors},
             status=status.HTTP_400_BAD_REQUEST
         )
+
+
+class InvoiceDashboardViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for listing students with calculated invoice details
+    """
+    permission_classes = [IsAdminUser]
+    serializer_class = StudentInvoiceListSerializer
+    ordering_fields = ['student_id', 'enrollment_date']
+    search_fields = ['student_id', 'user__first_name', 'user__last_name', 'user__email']
+
+    def get_queryset(self):
+        return Student.objects.all().select_related('user').prefetch_related('enrollments__course').order_by('-created_at')
+
+
+class StudentInvoiceViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAdminUser]
+    serializer_class = StudentInvoiceSerializer
+    queryset = StudentInvoice.objects.all()
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['student__user__first_name', 'student__user__last_name', 'invoice_number']
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        student_id = self.request.query_params.get('student_id')
+        if student_id:
+            qs = qs.filter(student_id=student_id)
+        return qs
+
+    @action(detail=True, methods=['get'])
+    def download_pdf(self, request, pk=None):
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.enums import TA_RIGHT, TA_CENTER, TA_LEFT
+        from num2words import num2words
+        import io 
+        
+        invoice = self.get_object()
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+        elements = []
+        
+        styles = getSampleStyleSheet()
+        styles.add(ParagraphStyle(name='RightAlign', alignment=TA_RIGHT))
+        styles.add(ParagraphStyle(name='CenterAlign', alignment=TA_CENTER))
+        
+        def format_currency(amount):
+            return "{:,.2f}".format(float(amount))
+            
+        # INVOICE Header
+        elements.append(Paragraph("<b>INVOICE</b>", styles['RightAlign']))
+        elements.append(Spacer(1, 10))
+        
+        # Table 1: Company Info | Invoice Details
+        company_text = "<b>M/s. Rooman Technologies Pvt. Ltd.</b><br/>#30, 12th Cross, 1st Stage, Rajajinagar, Near Nalapaka Hotel, Bangalore-560010, Bangalore - 560010, Karnataka, India!"
+        invoice_text = f"Invoice No.:<br/><b>{invoice.invoice_number}</b><br/><br/>Dated:<br/><b>{invoice.invoice_date.strftime('%d/%m/%Y')}</b><br/><br/>Student Reg. No.:<br/><b>{invoice.student.student_id}</b>"
+        
+        data = [[Paragraph(company_text, styles['Normal']), Paragraph(invoice_text, styles['Normal'])]]
+        t1 = Table(data, colWidths=[350, 180])
+        t1.setStyle(TableStyle([
+            ('BOX', (0,0), (-1,-1), 1, colors.black),
+            ('GRID', (0,0), (-1,-1), 1, colors.black),
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('PADDING', (0,0), (-1,-1), 6),
+        ]))
+        elements.append(t1)
+        
+        # Table 2: Student Info
+        student_addr = invoice.student.center if invoice.student.center else "Bangalore - , Karnataka, India."
+        student_text = f"Student:<br/><b>{invoice.student.user.get_full_name()}</b><br/>{student_addr}"
+        data = [[Paragraph(student_text, styles['Normal'])]]
+        t2 = Table(data, colWidths=[530])
+        t2.setStyle(TableStyle([
+            ('BOX', (0,0), (-1,-1), 1, colors.black),
+            ('PADDING', (0,0), (-1,-1), 6),
+        ]))
+        elements.append(t2)
+        
+        # Table 3: Fees
+        data = [['Sl. #', 'Course', 'Amount in Rs.']]
+        courses = invoice.courses.split(', ') if invoice.courses else []
+        for idx, course_name in enumerate(courses, 1):
+            fee_amount = ""
+            try:
+                cfs = CourseFeeStructure.objects.filter(course_name=course_name).first()
+                if cfs:
+                    fee_amount = format_currency(cfs.fee_amount)
+            except:
+                pass
+            data.append([str(idx), Paragraph(course_name, styles['Normal']), fee_amount])
+            
+        # Spacer rows
+        data.append(['', '', ''])
+        
+        # Totals
+        totals = [
+            ('Total Fee:', invoice.total_amount),
+            ('Course Fee:', invoice.total_amount),
+            ('Discount:', invoice.discount),
+            ('Discounted Course Fee:', invoice.grand_total - invoice.registration_amount),
+            ('Service Tax:', 0.00),
+            ('Grand Total:', invoice.grand_total)
+        ]
+        
+        for label, val in totals:
+            style = styles['RightAlign']
+            # Bold for Grand Total label and value
+            lbl = f"<b>{label}</b>" if label == 'Grand Total:' else label
+            v = f"<b>{format_currency(val)}</b>" if label == 'Grand Total:' else format_currency(val)
+            data.append(['', Paragraph(lbl, style), Paragraph(v, style)])
+
+        t3 = Table(data, colWidths=[40, 390, 100])
+        t3.setStyle(TableStyle([
+            ('BOX', (0,0), (-1,-1), 1, colors.black),
+            ('GRID', (0,0), (-1,-1), 1, colors.black),
+            ('ALIGN', (2,0), (2,-1), 'RIGHT'),
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('SPAN', (0, len(data)-6), (0, -1)), # Span first col for totals area? No, simpler to leave empty.
+        ]))
+        elements.append(t3)
+        
+        # Table 4: Words
+        try:
+            amt_words = num2words(invoice.grand_total, lang='en_IN').title() + " Only/-"
+        except:
+            amt_words = f"{invoice.grand_total} Only/-"
+            
+        data = [[f"Amount chargeable (in words):\nRupees {amt_words}"]]
+        t4 = Table(data, colWidths=[530])
+        t4.setStyle(TableStyle([
+            ('BOX', (0,0), (-1,-1), 1, colors.black),
+            ('PADDING', (0,0), (-1,-1), 6),
+        ]))
+        elements.append(t4)
+        
+        # Table 5: Registration Receipt
+        if invoice.registration_amount > 0:
+            rec_no = "-------"
+            # Attempt to find receipt
+            rec = StudentReceipt.objects.filter(invoice=invoice, amount=invoice.registration_amount).first()
+            if rec: rec_no = rec.receipt_number
+            
+            data = [[f"Received as registration amount vide receipt no. {rec_no}:", format_currency(invoice.registration_amount)]]
+            t5 = Table(data, colWidths=[430, 100])
+            t5.setStyle(TableStyle([
+                ('BOX', (0,0), (-1,-1), 1, colors.black),
+                ('GRID', (0,0), (-1,-1), 1, colors.black),
+                ('ALIGN', (1,0), (1,0), 'RIGHT'),
+            ]))
+            elements.append(t5)
+            
+        # Table 6: Installment Payable
+        inst_total = sum(i.amount for i in invoice.installments.all())
+        data = [['Installment Payable:', format_currency(inst_total)]]
+        t6 = Table(data, colWidths=[430, 100])
+        t6.setStyle(TableStyle([
+            ('BOX', (0,0), (-1,-1), 1, colors.black),
+            ('GRID', (0,0), (-1,-1), 1, colors.black),
+            ('ALIGN', (1,0), (1,0), 'RIGHT'),
+        ]))
+        elements.append(t6)
+        
+        # Table 7: Installments List
+        data = [['Sl. #', 'Installment', 'Date', 'Amount in Rs.']]
+        for idx, inst in enumerate(invoice.installments.all(), 1):
+            data.append([str(idx), f"Installment {inst.installment_no}", inst.due_date.strftime('%d/%m/%Y'), format_currency(inst.amount)])
+            
+        t7 = Table(data, colWidths=[40, 250, 140, 100])
+        t7.setStyle(TableStyle([
+            ('BOX', (0,0), (-1,-1), 1, colors.black),
+            ('GRID', (0,0), (-1,-1), 1, colors.black),
+            ('ALIGN', (3,0), (3,-1), 'RIGHT'),
+            ('ALIGN', (0,0), (0,-1), 'CENTER'),
+            ('ALIGN', (2,0), (2,-1), 'CENTER'),
+        ]))
+        elements.append(t7)
+        
+        # Table 8: Footer
+        terms = ("Terms and Conditions:<br/>"
+                 "1. The course fee paid is Non-refundable/Non-Transferable.<br/>"
+                 "2. Student must abide to the payment date mentioned for each installment.<br/>"
+                 "3. Any payments made will be acknowledged by SMS/Email.<br/>"
+                 "4. For detailed instruction, login to student's portal.")
+        signatory = "<br/><br/><br/><br/>For M/s. Rooman Technologies Pvt. Ltd.<br/><br/><br/>Authorized Signatory"
+        
+        data = [[Paragraph(terms, styles['Normal']), Paragraph(signatory, styles['RightAlign'])]]
+        t8 = Table(data, colWidths=[280, 250])
+        t8.setStyle(TableStyle([
+            ('BOX', (0,0), (-1,-1), 1, colors.black),
+            ('GRID', (0,0), (-1,-1), 1, colors.black),
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ]))
+        elements.append(t8)
+        
+        doc.build(elements)
+        buffer.seek(0)
+        response = HttpResponse(buffer, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="invoice_{invoice.invoice_number}.pdf"'
+        return response
+
+
+class StudentReceiptViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAdminUser]
+    serializer_class = StudentReceiptSerializer
+    queryset = StudentReceipt.objects.all()
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['invoice__invoice_number', 'receipt_number']
+    
+    def perform_create(self, serializer):
+        try:
+            from .models import AdminProfile
+            profile = AdminProfile.objects.get(user=self.request.user)
+            serializer.save(created_by=profile)
+        except:
+             serializer.save()
+
+    @action(detail=True, methods=['get'])
+    def download_pdf(self, request, pk=None):
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.enums import TA_RIGHT, TA_CENTER, TA_LEFT
+        from num2words import num2words
+        from django.db.models import Sum
+        import io 
+
+        receipt = self.get_object()
+        invoice = receipt.invoice
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+        elements = []
+        
+        styles = getSampleStyleSheet()
+        styles.add(ParagraphStyle(name='RightAlign', alignment=TA_RIGHT))
+        styles.add(ParagraphStyle(name='CenterAlign', alignment=TA_CENTER))
+        
+        def format_currency(amount):
+            return "{:,.2f}".format(float(amount))
+            
+        # Header
+        elements.append(Paragraph("<b>RECEIPT</b>", styles['RightAlign']))
+        elements.append(Spacer(1, 10))
+        
+        # Table 1: Company | Receipt Info
+        company_text = "<b>M/s. Rooman Technologies Pvt. Ltd.</b><br/>#30, 12th Cross, 1st Stage, Rajajinagar, Near Nalapaka Hotel, Bangalore-560010, Bangalore - 560010, Karnataka, India."
+        
+        rec_date = receipt.receipt_date.strftime('%d/%m/%Y')
+        receipt_info = f"Receipt No.: {receipt.receipt_number}<br/><br/>Dated:<br/>{rec_date}"
+        
+        data = [[Paragraph(company_text, styles['Normal']), Paragraph(receipt_info, styles['Normal'])]]
+        t1 = Table(data, colWidths=[350, 180])
+        t1.setStyle(TableStyle([
+            ('BOX', (0,0), (-1,-1), 1, colors.black),
+            ('GRID', (0,0), (-1,-1), 1, colors.black),
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('PADDING', (0,0), (-1,-1), 6),
+        ]))
+        elements.append(t1)
+        
+        # Table 2: Student | Invoice Info
+        student_addr = invoice.student.center if invoice.student.center else "Bangalore - , Karnataka, India."
+        student_text = f"Student:<br/>{invoice.student.user.get_full_name()}<br/>, {student_addr}"
+        
+        inv_info = f"Invoice No.:<br/>{invoice.invoice_number}<br/>Student Reg. No.:<br/>{invoice.student.student_id}"
+        
+        data = [[Paragraph(student_text, styles['Normal']), Paragraph(inv_info, styles['Normal'])]]
+        t2 = Table(data, colWidths=[350, 180])
+        t2.setStyle(TableStyle([
+            ('BOX', (0,0), (-1,-1), 1, colors.black),
+            ('GRID', (0,0), (-1,-1), 1, colors.black),
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('PADDING', (0,0), (-1,-1), 6),
+        ]))
+        elements.append(t2)
+        
+        # Table 3: Items
+        data = [['Sl. #', 'Description', 'Amount in Rs.', 'Tax in Rs.', 'Total in Rs.']]
+        
+        desc = receipt.notes if receipt.notes else receipt.category
+        
+        amount = format_currency(receipt.amount)
+        tax = "0.00"
+        
+        data.append(['1.', desc, amount, tax, amount])
+        
+        # Spacers
+        data.append(['', '', '', '', ''])
+        data.append(['', '', '', '', ''])
+        
+        # Totals
+        data.append(['', '', 'Net Total Amount:', '', amount])
+        data.append(['', '', 'Service Tax:', '', tax])
+        data.append(['', '', 'Total:', '', amount])
+        
+        t3 = Table(data, colWidths=[40, 250, 90, 70, 80])
+        t3.setStyle(TableStyle([
+            ('BOX', (0,0), (-1,-1), 1, colors.black),
+            ('GRID', (0,0), (-1,0), 1, colors.black), # Header grid
+            ('GRID', (0,1), (-1,1), 1, colors.black), # Item row grid
+            ('ALIGN', (2,0), (-1,-1), 'RIGHT'),
+            ('ALIGN', (0,0), (0,-1), 'CENTER'),
+            ('ALIGN', (2,4), (2,6), 'RIGHT'),
+            ('ALIGN', (4,4), (4,6), 'RIGHT'),
+        ]))
+        elements.append(t3)
+        
+        # Words
+        try:
+            amt_words = num2words(receipt.amount, lang='en_IN').title() + " Only/-"
+        except:
+            amt_words = f"{receipt.amount} Only/-"
+        
+        data = [[f"Amount chargeable (in words):\nRupees {amt_words}"]]
+        t4 = Table(data, colWidths=[530])
+        t4.setStyle(TableStyle([
+            ('BOX', (0,0), (-1,-1), 1, colors.black),
+            ('PADDING', (0,0), (-1,-1), 6),
+        ]))
+        elements.append(t4)
+        
+        # Footer
+        total_paid = StudentReceipt.objects.filter(invoice=invoice).aggregate(Sum('amount'))['amount__sum'] or 0
+        balance = invoice.grand_total - total_paid
+        if balance < 0: balance = 0
+        
+        footer_data = [[
+            f"Balance Due:\nRs.{format_currency(balance)}/-",
+            "Student Signature:",
+            f"For M/s. Rooman Technologies Pvt. Ltd.\n\n\n\n\nAuthorized Signatory"
+        ]]
+        
+        t5 = Table(footer_data, colWidths=[176, 177, 177])
+        t5.setStyle(TableStyle([
+            ('BOX', (0,0), (-1,-1), 1, colors.black),
+            ('GRID', (0,0), (-1,-1), 1, colors.black),
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('ALIGN', (2,0), (2,0), 'RIGHT'),
+            ('PADDING', (0,0), (-1,-1), 6),
+        ]))
+        elements.append(t5)
+        
+        doc.build(elements)
+        buffer.seek(0)
+        response = HttpResponse(buffer, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="receipt_{receipt.receipt_number}.pdf"'
+        return response
+
+class CourseFeeStructureViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [IsAdminUser]
+    serializer_class = CourseFeeStructureSerializer
+    queryset = CourseFeeStructure.objects.all()
 
