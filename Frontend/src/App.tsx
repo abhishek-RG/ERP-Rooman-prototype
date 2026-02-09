@@ -35,6 +35,9 @@ import AdminSettings from './pages/admin/Settings'
 import Activities from './pages/admin/activities/Activities'
 import AddActivity from './pages/admin/activities/AddActivity'
 import ActivityDetail from './pages/admin/activities/ActivityDetail'
+import InvoiceDashboard from './pages/admin/invoices/InvoiceDashboard'
+import UpdateInvoice from './pages/admin/invoices/UpdateInvoice'
+import AddReceipt from './pages/admin/invoices/AddReceipt'
 
 function App() {
   return (
@@ -209,6 +212,30 @@ function App() {
             element={
               <PrivateRoute role="admin">
                 <AddActivity />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/invoices"
+            element={
+              <PrivateRoute role="admin">
+                <InvoiceDashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/students/invoice/update/:id"
+            element={
+              <PrivateRoute role="admin">
+                <UpdateInvoice />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/students/invoice/receipt/add/:id"
+            element={
+              <PrivateRoute role="admin">
+                <AddReceipt />
               </PrivateRoute>
             }
           />

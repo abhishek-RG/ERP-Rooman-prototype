@@ -3,7 +3,9 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     AdminProfileViewSet, UserManagementViewSet,
     SystemSettingsViewSet, AuditLogViewSet,
-    NotificationViewSet, ReportViewSet, EnquiryViewSet
+    NotificationViewSet, ReportViewSet, EnquiryViewSet,
+    InvoiceDashboardViewSet, StudentInvoiceViewSet, StudentReceiptViewSet,
+    CourseFeeStructureViewSet
 )
 
 router = DefaultRouter()
@@ -14,6 +16,10 @@ router.register(r'audit-logs', AuditLogViewSet, basename='audit-log')
 router.register(r'notifications', NotificationViewSet, basename='notification')
 router.register(r'reports', ReportViewSet, basename='report')
 router.register(r'enquiry', EnquiryViewSet, basename='enquiry')
+router.register(r'invoices', InvoiceDashboardViewSet, basename='invoice-dashboard')
+router.register(r'student-invoices', StudentInvoiceViewSet, basename='student-invoice')
+router.register(r'student-receipts', StudentReceiptViewSet, basename='student-receipt')
+router.register(r'course-fees', CourseFeeStructureViewSet, basename='course-fee')
 
 urlpatterns = [
     path('', include(router.urls)),

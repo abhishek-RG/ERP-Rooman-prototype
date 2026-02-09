@@ -1,4 +1,5 @@
 import Button from '../ui/Button'
+import { useNavigate } from 'react-router-dom'
 import { userManagementService } from '../../services/userManagementService'
 
 export interface UserCardData {
@@ -42,9 +43,20 @@ const UserCard = ({ user, onDelete, onView, isLoading = false }: UserCardProps) 
     })
   }
 
-  const handleDownloadInvoice = async (e: React.MouseEvent) => {
+
+  const navigate = useNavigate()
+
+  const handleInvoiceAction = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+
+    // Feature: Redirect students to Invoice Dashboard
+    if (user.role === 'student') {
+      navigate('/admin/invoices', { state: { highlightUserId: user.id } })
+      return
+    }
+
+    // Fallback: Download invoice for other roles (e.g. employees)
     try {
       await userManagementService.downloadInvoice(user.id)
     } catch (err) {
@@ -95,9 +107,8 @@ const UserCard = ({ user, onDelete, onView, isLoading = false }: UserCardProps) 
       <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div
-            className={`w-2 h-2 rounded-full ${
-              user.is_active ? 'bg-green-500' : 'bg-gray-400'
-            }`}
+            className={`w-2 h-2 rounded-full ${user.is_active ? 'bg-green-500' : 'bg-gray-400'
+              }`}
           ></div>
           <span className="text-xs text-gray-600 font-medium">
             {user.is_active ? 'Active' : 'Inactive'}
@@ -108,7 +119,7 @@ const UserCard = ({ user, onDelete, onView, isLoading = false }: UserCardProps) 
           <Button
             size="sm"
             variant="secondary"
-            onClick={handleDownloadInvoice}
+            onClick={handleInvoiceAction}
             disabled={isLoading}
           >
             Invoice

@@ -348,3 +348,92 @@ class Enquiry(models.Model):
     
     def __str__(self):
         return f"{self.name} - {self.center} - {self.enquiry_type}"
+
+
+class CourseFeeStructure(models.Model):
+    """
+    Model for storing course-wise fees
+    """
+    course_name = models.CharField(max_length=255, unique=True)
+    fee_amount = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        db_table = 'course_fee_structure'
+        verbose_name = 'Course Fee Structure'
+        verbose_name_plural = 'Course Fee Structures'
+        ordering = ['course_name']
+
+    def __str__(self):
+        return f"{self.course_name} - {self.fee_amount}"
+
+
+class StudentInvoice(models.Model):
+    student = models.ForeignKey('student.Student', on_delete=models.CASCADE, related_name='invoices')
+    invoice_number = models.CharField(max_length=20, unique=True, editable=False)
+    invoice_date = models.DateField(auto_now_add=True)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, help_text="Total Course Fees")
+    discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    grand_total = models.DecimalField(max_digits=10, decimal_places=2)
+    registration_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    courses = models.TextField(help_text="Comma separated courses")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'student_invoices'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.invoice_number} - {self.student.user.get_full_name()}"
+
+    def save(self, *args, **kwargs):
+        if not self.invoice_number:
+            import random
+            from datetime import datetime
+            # Format: RAJBANINV + random number as per image example
+            self.invoice_number = f"INV{datetime.now().strftime('%Y%m')}{random.randint(1000, 9999)}"
+        super().save(*args, **kwargs)
+
+
+class InvoiceInstallment(models.Model):
+    invoice = models.ForeignKey(StudentInvoice, on_delete=models.CASCADE, related_name='installments')
+    installment_no = models.IntegerField()
+    due_date = models.DateField()
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20, default='Pending', choices=[('Pending', 'Pending'), ('Paid', 'Paid')])
+
+    class Meta:
+        db_table = 'invoice_installments'
+        ordering = ['installment_no']
+
+
+class StudentReceipt(models.Model):
+    invoice = models.ForeignKey(StudentInvoice, on_delete=models.CASCADE, related_name='receipts')
+    receipt_number = models.CharField(max_length=20, unique=True, editable=False)
+    receipt_date = models.DateField(auto_now_add=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    category = models.CharField(max_length=50, choices=[
+        ('Course Fees', 'Course Fees'), 
+        ('Courseware', 'Courseware'),
+        ('Exam Fees', 'Exam Fees'),
+        ('Misc', 'Misc')
+    ], default='Course Fees')
+    payment_mode = models.CharField(max_length=50, default='Cash')
+    transaction_ref = models.CharField(max_length=100, blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)
+    created_by = models.ForeignKey('AdminProfile', on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        db_table = 'student_receipts'
+        ordering = ['-receipt_date']
+
+    def __str__(self):
+        return f"{self.receipt_number} - {self.amount}"
+
+    def save(self, *args, **kwargs):
+        if not self.receipt_number:
+            import random
+            from datetime import datetime
+            self.receipt_number = f"RCT{datetime.now().strftime('%Y%m')}{random.randint(1000, 9999)}"
+        super().save(*args, **kwargs)
+

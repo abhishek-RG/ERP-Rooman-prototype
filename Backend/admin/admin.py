@@ -1,5 +1,5 @@
 from django.contrib import admin as django_admin
-from .models import AdminProfile, SystemSettings, AuditLog, Notification, Report, Enquiry
+from .models import AdminProfile, SystemSettings, AuditLog, Notification, Report, Enquiry, CourseFeeStructure
 
 
 @django_admin.register(AdminProfile)
@@ -59,3 +59,9 @@ class EnquiryAdmin(django_admin.ModelAdmin):
         }),
     )
 
+
+@django_admin.register(CourseFeeStructure)
+class CourseFeeStructureAdmin(django_admin.ModelAdmin):
+    list_display = ['course_name', 'fee_amount']
+    search_fields = ['course_name']
+    list_editable = ['fee_amount']

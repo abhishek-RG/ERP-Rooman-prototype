@@ -1,7 +1,12 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
-from .models import AdminProfile, SystemSettings, AuditLog, Notification, Report, Activity, Enquiry
+from django.db.models import Sum
+from student.models import Student
+from .models import (
+    AdminProfile, SystemSettings, AuditLog, Notification, Report, Activity, Enquiry, CourseFeeStructure,
+    StudentInvoice, InvoiceInstallment, StudentReceipt
+)
 
 User = get_user_model()
 
@@ -335,3 +340,103 @@ class EnquirySerializer(serializers.ModelSerializer):
             'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+class StudentInvoiceListSerializer(serializers.ModelSerializer):
+    student_name = serializers.CharField(source='user.get_full_name', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
+    email = serializers.CharField(source='user.email', read_only=True)
+    courses = serializers.SerializerMethodField()
+    total_fees = serializers.SerializerMethodField()
+    fees_due = serializers.SerializerMethodField()
+    invoice_id = serializers.SerializerMethodField()
+    last_receipt_id = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Student
+        fields = ['id', 'student_name', 'username', 'email', 'center', 'courses', 'total_fees', 'fees_due', 'invoice_id', 'last_receipt_id']
+
+    def get_courses(self, obj):
+        inv = obj.invoices.first()
+        if inv and inv.courses:
+            return inv.courses.split(', ')
+        return [e.course.course_name for e in obj.enrollments.all()]
+
+    def get_total_fees(self, obj):
+        inv = obj.invoices.first()
+        if inv:
+            return inv.grand_total
+        course_names = [e.course.course_name for e in obj.enrollments.all()]
+        total = CourseFeeStructure.objects.filter(course_name__in=course_names).aggregate(total=Sum('fee_amount'))['total']
+        return total or 0
+
+    def get_fees_due(self, obj):
+        inv = obj.invoices.first()
+        if inv:
+            paid = inv.receipts.aggregate(total=Sum('amount'))['total'] or 0
+            return inv.grand_total - paid
+        return 0
+
+    def get_invoice_id(self, obj):
+        inv = obj.invoices.first()
+        return inv.id if inv else None
+
+    def get_last_receipt_id(self, obj):
+        inv = obj.invoices.first()
+        if inv:
+            receipt = inv.receipts.order_by('-id').first()
+            return receipt.id if receipt else None
+        return None
+
+class InvoiceInstallmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InvoiceInstallment
+        fields = ['id', 'installment_no', 'due_date', 'amount', 'status']
+
+class CourseFeeStructureSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CourseFeeStructure
+        fields = '__all__'
+
+class StudentInvoiceSerializer(serializers.ModelSerializer):
+    installments = InvoiceInstallmentSerializer(many=True, required=False)
+    student_name = serializers.CharField(source='student.user.get_full_name', read_only=True)
+    student_username = serializers.CharField(source='student.user.username', read_only=True)
+    
+    class Meta:
+        model = StudentInvoice
+        fields = ['id', 'student', 'student_name', 'student_username', 'invoice_number', 'invoice_date', 
+                  'total_amount', 'discount', 'grand_total', 'registration_amount', 
+                  'courses', 'created_at', 'installments']
+        read_only_fields = ['invoice_number', 'created_at']
+
+    def create(self, validated_data):
+        installments_data = validated_data.pop('installments', [])
+        invoice = StudentInvoice.objects.create(**validated_data)
+        for installment in installments_data:
+            InvoiceInstallment.objects.create(invoice=invoice, **installment)
+        return invoice
+
+    def update(self, instance, validated_data):
+        installments_data = validated_data.pop('installments', [])
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        if installments_data:
+            instance.installments.all().delete()
+            for installment in installments_data:
+                InvoiceInstallment.objects.create(invoice=instance, **installment)
+        
+        return instance
+
+class StudentReceiptSerializer(serializers.ModelSerializer):
+    created_by_name = serializers.CharField(source='created_by.user.get_full_name', read_only=True)
+    student_name = serializers.CharField(source='invoice.student.user.get_full_name', read_only=True)
+    invoice_number = serializers.CharField(source='invoice.invoice_number', read_only=True)
+
+    class Meta:
+        model = StudentReceipt
+        fields = ['id', 'invoice', 'invoice_number', 'student_name', 'receipt_number', 'receipt_date', 
+                  'amount', 'category', 'payment_mode', 'transaction_ref', 'notes', 'created_by', 'created_by_name']
+        read_only_fields = ['receipt_number', 'receipt_date', 'created_by']
+
