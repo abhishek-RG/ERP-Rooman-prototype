@@ -510,7 +510,11 @@ class InvoiceDashboardViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ['student_id', 'user__first_name', 'user__last_name', 'user__email']
 
     def get_queryset(self):
-        return Student.objects.all().select_related('user').prefetch_related('enrollments__course').order_by('-created_at')
+        qs = Student.objects.all().select_related('user').prefetch_related('enrollments__course').order_by('-created_at')
+        user_id = self.request.query_params.get('user_id')
+        if user_id:
+            qs = qs.filter(user_id=user_id)
+        return qs
 
 
 class StudentInvoiceViewSet(viewsets.ModelViewSet):
@@ -523,7 +527,7 @@ class StudentInvoiceViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         student_id = self.request.query_params.get('student_id')
-        if student_id:
+        if student_id and student_id != 'undefined' and student_id != '':
             qs = qs.filter(student_id=student_id)
         return qs
 
