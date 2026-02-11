@@ -4,9 +4,10 @@ from django.contrib.auth.password_validation import validate_password
 from django.db.models import Sum
 from student.models import Student
 from .models import (
-    AdminProfile, SystemSettings, AuditLog, Notification, Report, Activity, Enquiry, CourseFeeStructure,
+    AdminProfile, SystemSettings, AuditLog, Notification, Report, Activity, Enquiry, FollowUp, CourseFeeStructure,
     StudentInvoice, InvoiceInstallment, StudentReceipt
 )
+
 
 User = get_user_model()
 
@@ -331,6 +332,11 @@ class EnquirySerializer(serializers.ModelSerializer):
             'organisation_name',
             'designation',
             'total_work_experience',
+            'reason_for_enquiry',
+            'course',
+            'lead_status',
+            'stage',
+            'notes',
             'mobile_number',
             'email',
             'country',
@@ -340,6 +346,13 @@ class EnquirySerializer(serializers.ModelSerializer):
             'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class FollowUpSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FollowUp
+        fields = ['id', 'enquiry', 'date', 'notes', 'outcome', 'next_follow_up_date', 'created_at']
+        read_only_fields = ['id', 'created_at']
 
 class StudentInvoiceListSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='user.get_full_name', read_only=True)
@@ -439,6 +452,7 @@ class StudentReceiptSerializer(serializers.ModelSerializer):
         fields = ['id', 'invoice', 'invoice_number', 'student_name', 'receipt_number', 'receipt_date', 
                   'amount', 'category', 'payment_mode', 'transaction_ref', 'notes', 'created_by', 'created_by_name']
         read_only_fields = ['receipt_number', 'receipt_date', 'created_by']
+
 
 from employee.models import Employee
 

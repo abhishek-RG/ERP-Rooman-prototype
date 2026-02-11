@@ -40,6 +40,7 @@ const getNavItems = (role: string): NavItem[] => {
     ],
     admin: [
       { name: 'Dashboard', path: '/admin/dashboard', icon: HomeIcon },
+      { name: 'Enquiries', path: '/admin/enquiries', icon: UserGroupIcon },
       { name: 'Users', path: '/admin/users', icon: UserGroupIcon },
       { name: 'Students', path: '/admin/students', icon: UserGroupIcon },
       { name: 'Employees', path: '/admin/employees', icon: UserGroupIcon },
