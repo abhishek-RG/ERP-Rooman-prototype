@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../context/AuthContext'
+import { useAuth } from '@/context/AuthContext'
 import {
   HomeIcon,
   UserGroupIcon,
@@ -8,6 +8,8 @@ import {
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
   CheckCircleIcon,
+  CalendarDaysIcon,
+  ClockIcon,
 } from '@heroicons/react/24/outline'
 
 interface NavItem {
@@ -42,8 +44,10 @@ const getNavItems = (role: string): NavItem[] => {
       { name: 'Dashboard', path: '/admin/dashboard', icon: HomeIcon },
       { name: 'Enquiries', path: '/admin/enquiries', icon: UserGroupIcon },
       { name: 'Users', path: '/admin/users', icon: UserGroupIcon },
-      { name: 'Students', path: '/admin/students', icon: UserGroupIcon },
-      { name: 'Employees', path: '/admin/employees', icon: UserGroupIcon },
+      { name: 'Batches', path: '/admin/batches', icon: CalendarDaysIcon },
+      { name: 'Sessions', path: '/admin/sessions', icon: ClockIcon },
+      // { name: 'Students', path: '/admin/students', icon: UserGroupIcon },
+      // { name: 'Employees', path: '/admin/employees', icon: UserGroupIcon },
       { name: 'Activities', path: '/admin/activities', icon: CheckCircleIcon },
       { name: 'Reports', path: '/admin/reports', icon: ChartBarIcon },
       { name: 'Settings', path: '/admin/settings', icon: Cog6ToothIcon },

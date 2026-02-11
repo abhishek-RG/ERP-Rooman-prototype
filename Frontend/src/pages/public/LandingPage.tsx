@@ -29,7 +29,7 @@ const LandingPage = () => {
                                 to="/enquiry"
                                 className="px-8 py-4 bg-white text-gray-700 rounded-xl font-semibold text-lg border-2 border-gray-200 hover:border-purple-600 hover:shadow-xl transition-all duration-300"
                             >
-                                Make an Enquiry
+                                Contact
                             </Link>
                         </div>
                     </div>

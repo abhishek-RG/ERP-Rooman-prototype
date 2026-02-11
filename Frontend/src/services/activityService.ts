@@ -20,7 +20,7 @@ export const activityService = {
     if (ordering) params.append('ordering', ordering)
 
     const response = await api.get<{ count: number; results: Activity[] }>(
-      `/activities/?${params.toString()}`
+      `activities/?${params.toString()}`
     )
     return response.data
   },
@@ -29,7 +29,7 @@ export const activityService = {
    * Get activity by ID
    */
   async getActivityById(id: number): Promise<Activity> {
-    const response = await api.get<Activity>(`/activities/${id}/`)
+    const response = await api.get<Activity>(`activities/${id}/`)
     return response.data
   },
 
@@ -38,7 +38,7 @@ export const activityService = {
    */
   async createActivity(data: CreateActivityData): Promise<{ data: Activity; message: string }> {
     const response = await api.post<{ data: Activity; message: string }>(
-      '/activities/',
+      'activities/',
       data
     )
     return response.data
@@ -53,7 +53,7 @@ export const activityService = {
   ): Promise<{ data: Activity; message: string }> {
     // Use PATCH for partial updates (employees will update `status` only)
     const response = await api.patch<{ data: Activity; message: string }>(
-      `/activities/${id}/`,
+      `activities/${id}/`,
       data
     )
     return response.data
@@ -63,7 +63,7 @@ export const activityService = {
    * Delete an activity
    */
   async deleteActivity(id: number): Promise<{ message: string }> {
-    const response = await api.delete<{ message: string }>(`/activities/${id}/`)
+    const response = await api.delete<{ message: string }>(`activities/${id}/`)
     return response.data
   },
 
@@ -72,7 +72,7 @@ export const activityService = {
    */
   async getMyActivities(): Promise<{ count: number; results: Activity[] }> {
     const response = await api.get<{ count: number; results: Activity[] }>(
-      '/activities/my-activities/'
+      'activities/my-activities/'
     )
     return response.data
   },
@@ -85,7 +85,7 @@ export const activityService = {
     endDate: string
   ): Promise<{ count: number; results: Activity[] }> {
     const response = await api.get<{ count: number; results: Activity[] }>(
-      `/activities/by-date/?start_date=${startDate}&end_date=${endDate}`
+      `activities/by-date/?start_date=${startDate}&end_date=${endDate}`
     )
     return response.data
   },
@@ -95,7 +95,7 @@ export const activityService = {
    */
   async getActivitiesByStatus(status: string): Promise<{ count: number; results: Activity[] }> {
     const response = await api.get<{ count: number; results: Activity[] }>(
-      `/activities/by-status/?status=${status}`
+      `activities/by-status/?status=${status}`
     )
     return response.data
   },
@@ -105,7 +105,7 @@ export const activityService = {
    */
   async getActivitiesByPriority(priority: string): Promise<{ count: number; results: Activity[] }> {
     const response = await api.get<{ count: number; results: Activity[] }>(
-      `/activities/by-priority/?priority=${priority}`
+      `activities/by-priority/?priority=${priority}`
     )
     return response.data
   },

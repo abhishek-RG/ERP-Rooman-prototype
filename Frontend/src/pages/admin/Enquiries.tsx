@@ -6,7 +6,7 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
-import { useEnquiryStore, Enquiry, EnquiryStatus } from '../../store/enquiryStore'
+import { useEnquiryStore, EnquiryStatus } from '../../store/enquiryStore'
 
 // Search Types
 export type SearchFilter = 'name' | 'id' | 'phone' | 'email'
@@ -15,7 +15,7 @@ const Enquiries = () => {
   const navigate = useNavigate()
 
   // Enquiry Store
-  const { enquiries, addEnquiry, updateEnquiryStage, isLoading, error, fetchEnquiries } = useEnquiryStore()
+  const { enquiries, addEnquiry, isLoading, error, fetchEnquiries } = useEnquiryStore()
 
   // Local UI State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -120,10 +120,8 @@ const Enquiries = () => {
         city: ''
       })
       setIsAddModalOpen(false)
-      alert('Enquiry added successfully!')
     } catch (error) {
       console.error('Error adding enquiry:', error)
-      alert('Failed to add enquiry. Please try again.')
     }
   }
 

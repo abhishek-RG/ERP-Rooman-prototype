@@ -23,6 +23,7 @@ interface UserDetail {
   join_date?: string
   salary?: string
   employment_type?: string
+  courses?: string[]
 }
 
 interface ViewUserModalProps {
@@ -117,8 +118,8 @@ const ViewUserModal = ({ isOpen, onClose, userId, onDownloadInvoice }: ViewUserM
                   <div>
                     <p className="text-sm text-gray-500 font-medium">Role</p>
                     <p className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${user.role === 'student' ? 'bg-blue-100 text-blue-800' :
-                        user.role === 'employee' ? 'bg-green-100 text-green-800' :
-                          'bg-red-100 text-red-800'
+                      user.role === 'employee' ? 'bg-green-100 text-green-800' :
+                        'bg-red-100 text-red-800'
                       }`}>
                       {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
                     </p>
@@ -160,6 +161,18 @@ const ViewUserModal = ({ isOpen, onClose, userId, onDownloadInvoice }: ViewUserM
                             day: 'numeric',
                           })}
                         </p>
+                      </div>
+                    )}
+                    {user.courses && user.courses.length > 0 && (
+                      <div className="col-span-2">
+                        <p className="text-sm text-gray-500 font-medium">Courses</p>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {user.courses.map((course, index) => (
+                            <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {course}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -257,7 +270,7 @@ const ViewUserModal = ({ isOpen, onClose, userId, onDownloadInvoice }: ViewUserM
           </Button>
         </div>
       </div>
-    </div>
+    </div >
   )
 }
 

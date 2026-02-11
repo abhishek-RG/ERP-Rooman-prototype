@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { useAuth } from '../../context/AuthContext'
+import { useAuth } from '@/context/AuthContext'
 import Input from '../../components/ui/Input'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
@@ -10,7 +10,7 @@ const Login = () => {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  
+
   const { login } = useAuth()
   const navigate = useNavigate()
 
