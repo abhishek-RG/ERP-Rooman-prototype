@@ -539,3 +539,20 @@ class StudentReceipt(models.Model):
             from datetime import datetime
             self.receipt_number = f"RCT{datetime.now().strftime('%Y%m')}{random.randint(1000, 9999)}"
         super().save(*args, **kwargs)
+
+class EmployeeSalaryStatus(models.Model):
+    """
+    Model to track current salary payment status for employees
+    """
+    employee = models.OneToOneField('employee.Employee', on_delete=models.CASCADE, related_name='salary_status')
+    status = models.CharField(max_length=20, choices=[('Paid', 'Salary Paid'), ('Pending', 'Pending')], default='Pending')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'employee_salary_status'
+        verbose_name = 'Employee Salary Status'
+        verbose_name_plural = 'Employee Salary Statuses'
+
+    def __str__(self):
+        return f"{self.employee.user.username} - {self.status}"
+

@@ -6,6 +6,7 @@ from .views import (
     NotificationViewSet, ReportViewSet, EnquiryViewSet,
     InvoiceDashboardViewSet, StudentInvoiceViewSet, StudentReceiptViewSet,
     CourseFeeStructureViewSet, BatchViewSet, SessionViewSet, SessionAttendanceViewSet
+    CourseFeeStructureViewSet, EmployeeSalaryDashboardViewSet
 )
 
 router = DefaultRouter()
@@ -23,6 +24,7 @@ router.register(r'course-fees', CourseFeeStructureViewSet, basename='course-fee'
 router.register(r'batches', BatchViewSet, basename='batch')
 router.register(r'sessions', SessionViewSet, basename='session')
 router.register(r'session-attendance', SessionAttendanceViewSet, basename='session-attendance')
+router.register(r'salary-dashboard', EmployeeSalaryDashboardViewSet, basename='salary-dashboard')
 
 urlpatterns = [
     path('', include(router.urls)),

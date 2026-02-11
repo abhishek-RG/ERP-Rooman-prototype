@@ -4,8 +4,7 @@ import Layout from '../../../components/layout/Layout'
 import api from '../../../services/api'
 import LoadingSpinner from '../../../components/ui/LoadingSpinner'
 import Button from '../../../components/ui/Button'
-import Card from '../../../components/ui/Card'
-import Input from '../../../components/ui/Input'
+
 
 interface CourseOption {
     id: number
@@ -41,7 +40,7 @@ const UpdateInvoice = () => {
             try {
                 const results = await Promise.allSettled([
                     api.get('/admin/course-fees/'),
-                    api.get(`/admin/user-management/${id}/`),
+                    api.get(`/admin/invoices/${id}/`),
                     api.get(`/admin/student-invoices/?student_id=${id}`)
                 ])
 
@@ -170,7 +169,7 @@ const UpdateInvoice = () => {
             } else {
                 await api.post('/admin/student-invoices/', payload)
             }
-            navigate('/admin/invoices')
+            navigate('/admin/students/invoices')
         } catch (error: any) {
             const msg = error.response?.data ? JSON.stringify(error.response.data) : error.message
             alert(`Failed to save invoice: ${msg}`)
@@ -193,7 +192,7 @@ const UpdateInvoice = () => {
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Student Info */}
                         <div className="bg-gray-100 p-4 rounded mb-4 border border-gray-200 text-gray-800">
-                            <strong>Student:</strong> {student ? `${student.first_name} ${student.last_name} (${student.username})` : `ID: ${id}`}
+                            <strong>Student:</strong> {student ? `${student.student_name} (${student.username})` : `ID: ${id}`}
                         </div>
 
                         {/* Course Table */}
@@ -312,7 +311,7 @@ const UpdateInvoice = () => {
                         </div>
 
                         <div className="flex gap-4 pt-4 border-t border-gray-200">
-                            <Button type="button" variant="secondary" onClick={() => navigate('/admin/invoices')}>Cancel</Button>
+                            <Button type="button" variant="secondary" onClick={() => navigate('/admin/students/invoices')}>Cancel</Button>
                             <Button type="submit" variant="primary">Save Invoice</Button>
                         </div>
                     </form>

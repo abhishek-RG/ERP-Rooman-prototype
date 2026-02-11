@@ -497,3 +497,27 @@ class StudentReceiptSerializer(serializers.ModelSerializer):
         fields = ['id', 'invoice', 'invoice_number', 'student_name', 'receipt_number', 'receipt_date', 
                   'amount', 'category', 'payment_mode', 'transaction_ref', 'notes', 'created_by', 'created_by_name']
         read_only_fields = ['receipt_number', 'receipt_date', 'created_by']
+
+
+from employee.models import Employee
+
+class EmployeeSalaryDashboardSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(source='user.get_full_name', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
+    status = serializers.SerializerMethodField()
+    employee_salary_id = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Employee
+        fields = ['id', 'name', 'username', 'center', 'department', 'designation', 'salary', 'status', 'employee_salary_id']
+
+    def get_status(self, obj):
+        # Access the related salary_status if it exists
+        if hasattr(obj, 'salary_status'):
+            return obj.salary_status.status
+        return 'Pending'
+
+    def get_employee_salary_id(self, obj):
+        if hasattr(obj, 'salary_status'):
+            return obj.salary_status.id
+        return None

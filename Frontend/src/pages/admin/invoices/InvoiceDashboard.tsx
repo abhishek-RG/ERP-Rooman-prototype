@@ -4,7 +4,7 @@ import api from '../../../services/api'
 import LoadingSpinner from '../../../components/ui/LoadingSpinner'
 import Button from '../../../components/ui/Button'
 import Card from '../../../components/ui/Card'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 
 interface Invoice {
     id: number
@@ -22,6 +22,8 @@ const InvoiceDashboard = () => {
     const [invoices, setInvoices] = useState<Invoice[]>([])
     const [loading, setLoading] = useState(true)
     const navigate = useNavigate()
+    const location = useLocation()
+    const highlightUserId = location.state?.highlightUserId
 
     useEffect(() => {
         fetchInvoices()
@@ -29,8 +31,12 @@ const InvoiceDashboard = () => {
 
     const fetchInvoices = async () => {
         try {
-            const response = await api.get('/admin/invoices/')
-            // Handle pagination or list
+            let url = '/admin/invoices/'
+            if (highlightUserId) {
+                url += `?user_id=${highlightUserId}`
+            }
+
+            const response = await api.get(url)
             const data = response.data.results ? response.data.results : response.data
             setInvoices(data)
         } catch (error) {
@@ -38,6 +44,11 @@ const InvoiceDashboard = () => {
         } finally {
             setLoading(false)
         }
+    }
+
+    const clearFilter = () => {
+        navigate('/admin/students/invoices', { replace: true, state: {} })
+        window.location.reload()
     }
 
     const handlePrintInvoice = async (invoiceId: number) => {
@@ -75,7 +86,14 @@ const InvoiceDashboard = () => {
     return (
         <Layout role="admin">
             <div className="space-y-6">
-                <h1 className="text-2xl font-bold text-gray-900">Student Invoice Management</h1>
+                <div className="flex justify-between items-center">
+                    <h1 className="text-2xl font-bold text-gray-900">Student Invoice Management</h1>
+                    {highlightUserId && (
+                        <Button size="sm" variant="secondary" onClick={clearFilter}>
+                            Show All Students
+                        </Button>
+                    )}
+                </div>
                 <Card>
                     {loading ? (
                         <div className="flex justify-center p-8"><LoadingSpinner /></div>
