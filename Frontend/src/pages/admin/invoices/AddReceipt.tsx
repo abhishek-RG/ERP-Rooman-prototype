@@ -49,7 +49,7 @@ const AddReceipt = () => {
                 transaction_ref: refNo,
                 notes: notes
             })
-            navigate('/admin/invoices')
+            navigate('/admin/students/invoices')
         } catch (error) {
             console.error('Error saving receipt:', error)
             alert('Failed to save receipt')
