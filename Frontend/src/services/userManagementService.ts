@@ -2,7 +2,7 @@ import api from './api'
 import { CreateUserData } from '../types/createUser'
 import { UserCardData } from '../components/admin/UserCard'
 
-export interface UserResponse extends UserCardData {}
+export interface UserResponse extends UserCardData { }
 
 export const userManagementService = {
   /**
@@ -10,7 +10,7 @@ export const userManagementService = {
    */
   async getUsers(role?: 'student' | 'employee' | 'admin'): Promise<UserResponse[]> {
     const params = role ? { role } : {}
-    const response = await api.get('/admin/users/', { params })
+    const response = await api.get('admin/users/', { params })
     return response.data.results || response.data
   },
 
@@ -20,7 +20,7 @@ export const userManagementService = {
   async getUser(userId: number): Promise<UserResponse> {
     const id = Number(String(userId).replace(/^:+/, ''))
     if (!Number.isInteger(id)) throw new Error('Invalid user id')
-    const response = await api.get(`/admin/users/${id}/`)
+    const response = await api.get(`admin/users/${id}/`)
     return response.data
   },
 
@@ -28,7 +28,7 @@ export const userManagementService = {
    * Create a new user
    */
   async createUser(userData: CreateUserData): Promise<UserResponse> {
-    const response = await api.post('/admin/users/', userData)
+    const response = await api.post('admin/users/', userData)
     return response.data
   },
 
@@ -39,7 +39,7 @@ export const userManagementService = {
     // sanitize userId in case it's a string like ':1' from other code
     const id = Number(String(userId).replace(/^:+/, ''))
     if (!Number.isInteger(id)) throw new Error('Invalid user id')
-    await api.delete(`/admin/users/${id}/`)
+    await api.delete(`admin/users/${id}/`)
   },
 
   /**
@@ -48,7 +48,7 @@ export const userManagementService = {
   async activateUser(userId: number): Promise<void> {
     const id = Number(String(userId).replace(/^:+/, ''))
     if (!Number.isInteger(id)) throw new Error('Invalid user id')
-    await api.post(`/admin/users/${id}/activate/`)
+    await api.post(`admin/users/${id}/activate/`)
   },
 
   /**
@@ -57,7 +57,7 @@ export const userManagementService = {
   async deactivateUser(userId: number): Promise<void> {
     const id = Number(String(userId).replace(/^:+/, ''))
     if (!Number.isInteger(id)) throw new Error('Invalid user id')
-    await api.post(`/admin/users/${id}/deactivate/`)
+    await api.post(`admin/users/${id}/deactivate/`)
   },
 
   /**
@@ -66,12 +66,12 @@ export const userManagementService = {
   async downloadInvoice(userId: number): Promise<void> {
     const id = Number(String(userId).replace(/^:+/, ''))
     if (!Number.isInteger(id)) throw new Error('Invalid user id')
-    
+
     try {
-      const response = await api.get(`/admin/users/${id}/invoice/`, {
+      const response = await api.get(`admin/users/${id}/invoice/`, {
         responseType: 'blob',
       })
-      
+
       // Extract filename from Content-Disposition header
       const contentDisposition = response.headers['content-disposition']
       let filename = `invoice.pdf`
@@ -79,7 +79,7 @@ export const userManagementService = {
         const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/)
         if (filenameMatch) filename = filenameMatch[1]
       }
-      
+
       // Create blob URL and trigger download
       const url = window.URL.createObjectURL(response.data)
       const link = document.createElement('a')
@@ -104,7 +104,7 @@ export const userManagementService = {
     employees: number
     admins: number
   }> {
-    const response = await api.get('/admin/users/statistics/')
+    const response = await api.get('admin/users/statistics/')
     return response.data
   },
 }

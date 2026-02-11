@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/'
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -34,7 +34,7 @@ api.interceptors.response.use(
 
       try {
         const refreshToken = localStorage.getItem('refresh_token')
-        const response = await axios.post(`${API_BASE_URL}/auth/token/refresh/`, {
+        const response = await axios.post(`${API_BASE_URL}auth/token/refresh/`, {
           refresh: refreshToken,
         })
 
@@ -61,26 +61,26 @@ export default api
 // Enquiry/Lead APIs
 export const enquiryAPI = {
   fetchEnquiries: (params?: { page?: number; search?: string }) =>
-    api.get('/admin/enquiry/', { params }),
-  getEnquiry: (id: string | number) => api.get(`/admin/enquiry/${id}/`),
-  addEnquiry: (data: any) => api.post('/admin/enquiry/', data),
+    api.get('admin/enquiry/', { params }),
+  getEnquiry: (id: string | number) => api.get(`admin/enquiry/${id}/`),
+  addEnquiry: (data: any) => api.post('admin/enquiry/', data),
   updateStatus: (id: string | number, lead_status: string) =>
-    api.patch(`/admin/enquiry/${id}/update-status/`, { lead_status }),
+    api.patch(`admin/enquiry/${id}/update-status/`, { lead_status }),
   updateStage: (id: number | string, stage: string) => {
-    return api.patch(`/admin/enquiry/${id}/update-stage/`, { new_stage: stage })
+    return api.patch(`admin/enquiry/${id}/update-stage/`, { new_stage: stage })
   },
   addFollowUp: (enquiryId: number | string, followUpData: any) => {
-    return api.post(`/admin/enquiry/${enquiryId}/add-followup/`, followUpData)
+    return api.post(`admin/enquiry/${enquiryId}/add-followup/`, followUpData)
   },
   getFollowUps: (enquiryId: number | string) => {
-    return api.get(`/admin/enquiry/${enquiryId}/followups/`)
+    return api.get(`admin/enquiry/${enquiryId}/followups/`)
   },
   sendEmail: (emailData: { to_email: string, subject: string, message: string }) => {
-    return api.post('/admin/enquiry/send-email/', emailData)
+    return api.post('admin/enquiry/send-email/', emailData)
   }
 }
 
 export const leadAPI = {
   fetchLeads: (params?: { page?: number; status?: string }) =>
-    api.get('/admin/leads/', { params }),
+    api.get('admin/leads/', { params }),
 }

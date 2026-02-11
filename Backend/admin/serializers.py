@@ -7,9 +7,54 @@ from .models import (
     AdminProfile, SystemSettings, AuditLog, Notification, Report, Activity, Enquiry, FollowUp, CourseFeeStructure,
     StudentInvoice, InvoiceInstallment, StudentReceipt
 )
+from .models_batches import Batch, Session, SessionAttendance
 
 
 User = get_user_model()
+
+
+class BatchSerializer(serializers.ModelSerializer):
+    course_name = serializers.CharField(source='course.course_name', read_only=True)
+    faculty_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Batch
+        fields = [
+            'id', 'course', 'course_name', 'faculty', 'faculty_name', 'center', 'classroom',
+            'start_date', 'end_date', 'days', 'session_start_time',
+            'session_end_time', 'created_at'
+        ]
+        read_only_fields = ['id', 'created_at']
+        extra_kwargs = {
+            'faculty': {'required': False, 'allow_null': True}
+        }
+
+    def get_faculty_name(self, obj):
+        if obj.faculty:
+            return obj.faculty.get_full_name() or obj.faculty.username
+        return "Unassigned"
+
+class SessionSerializer(serializers.ModelSerializer):
+    batch_details = BatchSerializer(source='batch', read_only=True)
+
+    class Meta:
+        model = Session
+        fields = [
+            'id', 'batch', 'batch_details', 'session_date',
+            'start_time', 'end_time', 'conducted_date',
+            'conducted_start_time', 'conducted_end_time',
+            'content_covered', 'status', 'created_at'
+        ]
+        read_only_fields = ['id', 'created_at']
+
+class SessionAttendanceSerializer(serializers.ModelSerializer):
+    student_name = serializers.CharField(source='student.user.get_full_name', read_only=True)
+    student_id_code = serializers.CharField(source='student.student_id', read_only=True)
+
+    class Meta:
+        model = SessionAttendance
+        fields = ['id', 'session', 'student', 'student_name', 'student_id_code', 'status', 'remarks', 'created_at']
+        read_only_fields = ['id', 'created_at']
 
 
 class AdminProfileSerializer(serializers.ModelSerializer):

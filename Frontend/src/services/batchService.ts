@@ -2,10 +2,12 @@ import api from './api'
 
 export interface Batch {
     id: number
-    course_id: number
+    course: number
     course_name: string
-    faculty_id: number | null
+    faculty: number | null
     faculty_name: string
+    center: string | null
+    classroom: string | null
     start_date: string
     end_date: string
     days: string[]
@@ -15,8 +17,10 @@ export interface Batch {
 }
 
 export interface CreateBatchData {
-    course_id: number
-    faculty_id: number | null
+    course: number
+    faculty: number | null
+    center: string | null
+    classroom: string | null
     start_date: string
     end_date: string
     days: string[]
@@ -38,7 +42,7 @@ export const batchService = {
      * Get all batches
      */
     async getBatches(): Promise<Batch[]> {
-        const response = await api.get('/admin/batches/')
+        const response = await api.get('admin/batches/')
         return response.data.results || response.data
     },
 
@@ -46,7 +50,15 @@ export const batchService = {
      * Create a new batch
      */
     async createBatch(data: CreateBatchData): Promise<Batch> {
-        const response = await api.post('/admin/batches/', data)
+        const response = await api.post('admin/batches/', data)
+        return response.data
+    },
+
+    /**
+     * Update an existing batch
+     */
+    async updateBatch(id: number, data: Partial<CreateBatchData>): Promise<Batch> {
+        const response = await api.put(`admin/batches/${id}/`, data)
         return response.data
     },
 
@@ -54,7 +66,7 @@ export const batchService = {
      * Get sessions for a specific batch
      */
     async getSessions(batchId: number): Promise<Session[]> {
-        const response = await api.get(`/admin/sessions/?batch_id=${batchId}`)
+        const response = await api.get(`admin/sessions/?batch_id=${batchId}`)
         return response.data.results || response.data
     }
 }

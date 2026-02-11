@@ -1,99 +1,150 @@
 import { useState, useEffect } from 'react'
-import Layout from '../../components/layout/Layout'
 import Card from '../../components/ui/Card'
-import LoadingSpinner from '../../components/ui/LoadingSpinner'
-import { batchService, Batch, Session } from '../../services/batchService'
+import Input from '../../components/ui/Input'
+import Button from '../../components/ui/Button'
+import Layout from '../../components/layout/Layout'
+import { sessionService, Session } from '../../services/sessionService'
+import { useNavigate } from 'react-router-dom'
+import { ArrowPathIcon } from '@heroicons/react/24/outline'
+
+const AlphabetNavigation = ({ onSelect }: { onSelect: (letter: string) => void }) => {
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+    return (
+        <div className="flex flex-wrap gap-2 text-sm text-blue-600 mb-4 justify-center">
+            <button onClick={() => onSelect('All')} className="hover:underline font-bold">All</button>
+            {letters.map(l => (
+                <button key={l} onClick={() => onSelect(l)} className="hover:underline">{l}</button>
+            ))}
+            <button onClick={() => onSelect('Others')} className="hover:underline">Others</button>
+        </div>
+    )
+}
 
 const Sessions = () => {
-    const [batches, setBatches] = useState<Batch[]>([])
-    const [selectedBatchId, setSelectedBatchId] = useState<number | ''>('')
     const [sessions, setSessions] = useState<Session[]>([])
-    const [isLoading, setIsLoading] = useState(false)
+    const [loading, setLoading] = useState(true)
+    const [searchTerm, setSearchTerm] = useState('')
+    const navigate = useNavigate()
 
     useEffect(() => {
-        // Load batches for dropdown
-        const loadBatches = async () => {
-            try {
-                const data = await batchService.getBatches()
-                setBatches(data)
-            } catch (err) {
-                console.error('Failed to load batches', err)
-            }
-        }
-        loadBatches()
+        loadSessions()
     }, [])
 
-    useEffect(() => {
-        if (selectedBatchId) {
-            fetchSessions(Number(selectedBatchId))
-        } else {
-            setSessions([])
-        }
-    }, [selectedBatchId])
-
-    const fetchSessions = async (batchId: number) => {
+    const loadSessions = async () => {
         try {
-            setIsLoading(true)
-            const data = await batchService.getSessions(batchId)
+            setLoading(true)
+            const data = await sessionService.getSessions()
             setSessions(data)
-        } catch (err) {
-            console.error('Failed to load sessions', err)
-            setSessions([])
+        } catch (error) {
+            console.error('Failed to load sessions', error)
         } finally {
-            setIsLoading(false)
+            setLoading(false)
         }
     }
 
+    const filteredSessions = sessions.filter(s =>
+        s.batch_details?.course_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.batch_details?.faculty_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.session_date.includes(searchTerm)
+    )
+
     return (
         <Layout role="admin">
-            <div className="mb-6">
-                <h1 className="text-3xl font-bold text-gray-900 mb-4">Sessions</h1>
-                <div className="w-full max-w-md">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Select Batch</label>
-                    <select
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
-                        value={selectedBatchId}
-                        onChange={(e) => setSelectedBatchId(Number(e.target.value))}
-                    >
-                        <option value="">-- Choose a Batch --</option>
-                        {batches.map(b => (
-                            <option key={b.id} value={b.id}>{b.course_name} ({b.start_date})</option>
-                        ))}
-                    </select>
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900 italic">Results for all Sessions!</h1>
+                    <div className="text-sm text-gray-500 mt-1">
+                        Home &gt; Sessions &gt; List Sessions:
+                    </div>
                 </div>
             </div>
 
-            <Card title={selectedBatchId ? "Scheduled Sessions" : "Select a batch to view sessions"}>
-                {isLoading ? (
-                    <div className="flex justify-center p-8"><LoadingSpinner /></div>
-                ) : sessions.length === 0 ? (
-                    <p className="text-gray-500 py-4">No sessions found for this batch.</p>
+            <Card className="p-6 mb-6">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="flex w-full max-w-md gap-2">
+                        <Input
+                            placeholder="Keyword"
+                            value={searchTerm}
+                            onChange={(e: any) => setSearchTerm(e.target.value)}
+                            className="flex-1"
+                        />
+                        <Button variant="primary" className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold">
+                            Search
+                        </Button>
+                    </div>
+                    <AlphabetNavigation onSelect={(l) => console.log('Selected letter:', l)} />
+                    <div className="text-sm text-gray-600">
+                        Displaying 1 - {filteredSessions.length} of {filteredSessions.length} Session(s)
+                    </div>
+                </div>
+            </Card>
+
+            <Card className="overflow-hidden">
+                {loading ? (
+                    <div className="flex justify-center items-center py-20">
+                        <ArrowPathIcon className="animate-spin text-blue-600" width={40} />
+                    </div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Session ID</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <thead className="bg-[#4a7ebb] text-white">
+                                <tr className="divide-x divide-gray-300">
+                                    <th className="px-4 py-2 text-left text-xs font-bold uppercase">Sl.#</th>
+                                    <th className="px-4 py-2 text-left text-xs font-bold uppercase">Session</th>
+                                    <th className="px-4 py-2 text-left text-xs font-bold uppercase">Subject</th>
+                                    <th className="px-4 py-2 text-left text-xs font-bold uppercase">Faculty</th>
+                                    <th className="px-4 py-2 text-left text-xs font-bold uppercase">Class Room</th>
+                                    <th className="px-4 py-2 text-left text-xs font-bold uppercase">Time</th>
+                                    <th className="px-4 py-2 text-left text-xs font-bold uppercase">Conducted</th>
+                                    <th className="px-4 py-2 text-left text-xs font-bold uppercase">Status</th>
+                                    <th className="px-4 py-2 text-left text-xs font-bold uppercase">Center</th>
+                                    <th className="px-4 py-2 text-left text-xs font-bold uppercase">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {sessions.map(session => (
-                                    <tr key={session.id}>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#{session.id}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            {new Date(session.session_date).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                            <tbody className="bg-[#ffffcc] divide-y divide-white">
+                                {filteredSessions.map((session, index) => (
+                                    <tr key={session.id} className="hover:bg-[#ffff99] divide-x divide-white">
+                                        <td className="px-4 py-2 text-sm text-gray-900 font-bold">{index + 1}.</td>
+                                        <td className="px-4 py-2 text-sm">
+                                            <div className="text-red-600 font-bold leading-tight">Session {index + 1}<br />({session.id})</div>
+                                            <div className="text-orange-600 text-[10px] underline cursor-pointer mt-1 font-bold" onClick={() => navigate(`/admin/batches`)}>
+                                                Batch {session.batch}
+                                            </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {session.start_time} - {session.end_time}
+                                        <td className="px-4 py-2 text-sm text-blue-800 underline cursor-pointer italic font-medium">
+                                            {session.batch_details?.course_name}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${session.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                                                }`}>
-                                                {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
-                                            </span>
+                                        <td className="px-4 py-2 text-sm text-blue-800 underline cursor-pointer">
+                                            {session.batch_details?.faculty_name}
+                                        </td>
+                                        <td className="px-4 py-2 text-sm text-blue-800 underline cursor-pointer">
+                                            {session.batch_details?.classroom || 'N/A'}
+                                        </td>
+                                        <td className="px-4 py-2 text-sm text-gray-700">
+                                            <div className="font-bold">{session.session_date}</div>
+                                            <div className="text-xs">{session.start_time} - {session.end_time}</div>
+                                        </td>
+                                        <td className="px-4 py-2 text-sm text-gray-700">
+                                            {session.conducted_date ? (
+                                                <div>{session.conducted_date}<br /><span className="text-xs">{session.conducted_start_time}</span></div>
+                                            ) : '-'}
+                                        </td>
+                                        <td className="px-4 py-2 text-sm text-gray-700 font-medium capitalize">
+                                            {session.status}
+                                        </td>
+                                        <td className="px-4 py-2 text-sm text-gray-700">
+                                            {session.batch_details?.center}
+                                        </td>
+                                        <td className="px-4 py-2 text-sm">
+                                            <div className="flex flex-col gap-1">
+                                                <button className="text-orange-600 underline text-[10px] text-left font-bold uppercase hover:text-orange-800 transition-colors">Update Session</button>
+                                                <button
+                                                    className="text-orange-600 underline text-[10px] text-left font-bold uppercase hover:text-orange-800 transition-colors"
+                                                    onClick={() => navigate(`/admin/session-attendance/${session.id}`)}
+                                                >
+                                                    Session Attendance
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -105,5 +156,4 @@ const Sessions = () => {
         </Layout>
     )
 }
-
 export default Sessions

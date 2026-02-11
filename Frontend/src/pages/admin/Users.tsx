@@ -45,7 +45,7 @@ const AdminUsers = () => {
       setIsCreating(true)
       setError(null)
       const newUser = await userManagementService.createUser(userData)
-      
+
       // Add new user to list if it matches current role filter
       if (newUser.role === activeRole) {
         setUsers(prev => [newUser, ...prev])

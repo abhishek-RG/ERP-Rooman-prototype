@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import api from '../../services/api'
 import Layout from '../../components/layout/Layout'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -11,16 +12,26 @@ import { userManagementService } from '../../services/userManagementService'
 
 // Mock data for dropdowns (replace with actual API calls later or now if services exist)
 const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const CENTER_OPTIONS = [
+    'Electronic City PMKK Futureskill (TC016371)',
+    'Rajajinagar (123)',
+    'Rajajinagar Bangalore (RAJBAN)',
+    'Rooman Online (RON)',
+]
+const CLASSROOM_OPTIONS = ['Classroom 1', 'Classroom 2', 'Lab 1', 'Lab 2', 'Online']
 
 const Batches = () => {
     const [batches, setBatches] = useState<Batch[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [isModalOpen, setIsModalOpen] = useState(false)
+    const [editingBatch, setEditingBatch] = useState<Batch | null>(null)
 
     // Form State
     const [formData, setFormData] = useState<CreateBatchData>({
-        course_id: 0,
-        faculty_id: null,
+        course: 0,
+        faculty: null,
+        center: null,
+        classroom: null,
         start_date: '',
         end_date: '',
         days: [],
@@ -80,17 +91,25 @@ const Batches = () => {
     const [faculty, setFaculty] = useState<{ id: number, first_name: string, last_name: string }[]>([])
 
 
+    const fetchCourses = async () => {
+        try {
+            const response = await api.get('student/courses/')
+            // CourseViewSet returns pagination results or direct list
+            setCourses(response.data.results || response.data)
+        } catch (err) {
+            console.error('Failed to fetch courses:', err)
+        }
+    }
+
     useEffect(() => {
         fetchBatches()
         fetchFaculty()
+        fetchCourses()
     }, [])
 
     const fetchFaculty = async () => {
         try {
             const users = await userManagementService.getUsers('employee')
-            // Map the user response to the format expected by the dropdown if necessary
-            // The UserResponse interface in userManagementService extends UserCardData which has id, first_name, last_name
-            // so we can use it directly or map it safely
             setFaculty(users.map(u => ({
                 id: u.id,
                 first_name: u.first_name,
@@ -109,18 +128,35 @@ const Batches = () => {
             setBatches(data)
         } catch (err) {
             console.error('Failed to fetch batches:', err)
-            // For demo purposes, if API fails, we can show empty state or mock data
             setBatches([])
         } finally {
             setIsLoading(false)
         }
     }
 
+    const handleEdit = (batch: Batch) => {
+        setEditingBatch(batch)
+        setFormData({
+            course: batch.course,
+            faculty: batch.faculty,
+            center: batch.center,
+            classroom: batch.classroom,
+            start_date: batch.start_date,
+            end_date: batch.end_date,
+            days: batch.days,
+            session_start_time: batch.session_start_time,
+            session_end_time: batch.session_end_time
+        })
+        setIsModalOpen(true)
+    }
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target
         setFormData(prev => ({
             ...prev,
-            [name]: name === 'course_id' || name === 'faculty_id' ? Number(value) : value
+            [name]: name === 'course' ? Number(value) :
+                (name === 'faculty' ? (value ? Number(value) : null) :
+                    (name === 'center' || name === 'classroom' ? (value || null) : value))
         }))
     }
 
@@ -135,24 +171,35 @@ const Batches = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+
+        if (formData.course === 0) {
+            alert('Please select a course')
+            return
+        }
+
         try {
-            await batchService.createBatch(formData)
+            if (editingBatch) {
+                await batchService.updateBatch(editingBatch.id, formData)
+            } else {
+                await batchService.createBatch(formData)
+            }
             setIsModalOpen(false)
+            setEditingBatch(null)
             fetchBatches()
             // Reset form
             setFormData({
-                course_id: 0,
-                faculty_id: null,
+                course: 0,
+                faculty: null,
+                center: null,
+                classroom: null,
                 start_date: '',
                 end_date: '',
                 days: [],
                 session_start_time: '',
                 session_end_time: ''
             })
-            alert('Batch created successfully! Sessions have been auto-generated.')
         } catch (err) {
-            console.error('Failed to create batch:', err)
-            alert('Failed to create batch')
+            console.error(`Failed to ${editingBatch ? 'update' : 'create'} batch:`, err)
         }
     }
 
@@ -160,7 +207,21 @@ const Batches = () => {
         <Layout role="admin">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-gray-900">Batch Management</h1>
-                <Button onClick={() => setIsModalOpen(true)}>+ Create Batch</Button>
+                <Button onClick={() => {
+                    setEditingBatch(null)
+                    setFormData({
+                        course: 0,
+                        faculty: null,
+                        center: null,
+                        classroom: null,
+                        start_date: '',
+                        end_date: '',
+                        days: [],
+                        session_start_time: '',
+                        session_end_time: ''
+                    })
+                    setIsModalOpen(true)
+                }}>+ Create Batch</Button>
             </div>
 
             <Card>
@@ -174,18 +235,22 @@ const Batches = () => {
                             <thead className="bg-gray-50">
                                 <tr>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Batch ID</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Center</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Room</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Course</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Faculty</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dates</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                                    {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th> */}
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {batches.map(batch => (
                                     <tr key={batch.id}>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#{batch.id}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 italic">{batch.center || 'Not Selected'}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{batch.classroom || 'N/A'}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{batch.course_name}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{batch.faculty_name || 'Unassigned'}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{batch.start_date} to {batch.end_date}</td>
@@ -197,6 +262,14 @@ const Batches = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{batch.session_start_time} - {batch.session_end_time}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button
+                                                onClick={() => handleEdit(batch)}
+                                                className="text-blue-600 hover:text-blue-900 mr-4"
+                                            >
+                                                Edit
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -209,27 +282,59 @@ const Batches = () => {
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-                        <h2 className="text-xl font-bold mb-4">Create New Batch</h2>
+                        <h2 className="text-xl font-bold mb-4">{editingBatch ? 'Edit Batch' : 'Create New Batch'}</h2>
                         <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Center</label>
+                                <select
+                                    name="center"
+                                    value={formData.center || ''}
+                                    onChange={handleInputChange}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
+                                    required
+                                >
+                                    <option value="">Select Center</option>
+                                    {CENTER_OPTIONS.map(center => (
+                                        <option key={center} value={center}>{center}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Class Room</label>
+                                <select
+                                    name="classroom"
+                                    value={formData.classroom || ''}
+                                    onChange={handleInputChange}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
+                                    required
+                                >
+                                    <option value="">Select Class Room</option>
+                                    {CLASSROOM_OPTIONS.map(room => (
+                                        <option key={room} value={room}>{room}</option>
+                                    ))}
+                                </select>
+                            </div>
+
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Course</label>
                                 <select
-                                    name="course_id"
-                                    value={formData.course_id}
+                                    name="course"
+                                    value={formData.course}
                                     onChange={handleInputChange}
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
                                     required
                                 >
                                     <option value={0}>Select Course</option>
-                                    {courses.map(c => <option key={c.id} value={c.id}>{c.course_name}</option>)}
+                                    {courses.map((c: any) => <option key={c.id} value={c.id}>{c.course_name}</option>)}
                                 </select>
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Faculty</label>
                                 <select
-                                    name="faculty_id"
-                                    value={formData.faculty_id || ''}
+                                    name="faculty"
+                                    value={formData.faculty || ''}
                                     onChange={handleInputChange}
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
                                 >
@@ -280,8 +385,11 @@ const Batches = () => {
                             </div>
 
                             <div className="flex justify-end gap-3 mt-6">
-                                <Button variant="secondary" onClick={() => setIsModalOpen(false)} type="button">Cancel</Button>
-                                <Button type="submit">Create Batch</Button>
+                                <Button variant="secondary" onClick={() => {
+                                    setIsModalOpen(false)
+                                    setEditingBatch(null)
+                                }} type="button">Cancel</Button>
+                                <Button type="submit">{editingBatch ? 'Update Batch' : 'Create Batch'}</Button>
                             </div>
                         </form>
                     </div>

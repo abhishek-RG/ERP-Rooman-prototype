@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider } from './context/AuthContext'
+import { AuthProvider } from '@/context/AuthContext'
 import PrivateRoute from './components/common/PrivateRoute'
 
 // Public Pages
@@ -42,6 +42,7 @@ import UpdateInvoice from './pages/admin/invoices/UpdateInvoice'
 import AddReceipt from './pages/admin/invoices/AddReceipt'
 import Batches from './pages/admin/Batches'
 import Sessions from './pages/admin/Sessions'
+import SessionAttendance from './pages/admin/SessionAttendance'
 
 function App() {
   return (
@@ -184,6 +185,14 @@ function App() {
             element={
               <PrivateRoute role="admin">
                 <Sessions />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/session-attendance/:sessionId"
+            element={
+              <PrivateRoute role="admin">
+                <SessionAttendance />
               </PrivateRoute>
             }
           />

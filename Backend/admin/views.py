@@ -13,14 +13,15 @@ from datetime import datetime
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
-from .models import AdminProfile, SystemSettings, AuditLog, Notification, Report, Activity, Enquiry
+from .models_batches import Batch, Session, SessionAttendance
 from .serializers import (
     AdminProfileSerializer, UserManagementSerializer,
     SystemSettingsSerializer, AuditLogSerializer, 
     NotificationSerializer, ReportSerializer, EnquirySerializer,
     FollowUpSerializer, ActivitySerializer, ActivityListSerializer,
     StudentInvoiceListSerializer, StudentInvoiceSerializer, StudentReceiptSerializer,
-    CourseFeeStructureSerializer
+    CourseFeeStructureSerializer, BatchSerializer, SessionSerializer,
+    SessionAttendanceSerializer
 )
 from student.models import Student
 from .models import (
@@ -1005,6 +1006,96 @@ class StudentReceiptViewSet(viewsets.ModelViewSet):
         return response
 
 class CourseFeeStructureViewSet(viewsets.ReadOnlyModelViewSet):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminOrHasAdminProfile]
     serializer_class = CourseFeeStructureSerializer
     queryset = CourseFeeStructure.objects.all()
+
+class BatchViewSet(viewsets.ModelViewSet):
+    queryset = Batch.objects.all()
+    serializer_class = BatchSerializer
+    permission_classes = [IsAdminOrHasAdminProfile]
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['course__course_name', 'faculty__first_name', 'faculty__last_name']
+    ordering_fields = ['start_date', 'created_at']
+
+    def perform_create(self, serializer):
+        batch = serializer.save()
+        
+        # Auto-generate sessions
+        from datetime import timedelta
+        
+        current_date = batch.start_date
+        end_date = batch.end_date
+        days_map = {
+            'Mon': 0, 'Tue': 1, 'Wed': 2, 'Thu': 3, 'Fri': 4, 'Sat': 5, 'Sun': 6
+        }
+        target_days = [days_map[d] for d in batch.days if d in days_map]
+        
+        sessions_to_create = []
+        while current_date <= end_date:
+            if current_date.weekday() in target_days:
+                sessions_to_create.append(Session(
+                    batch=batch,
+                    session_date=current_date,
+                    start_time=batch.session_start_time,
+                    end_time=batch.session_end_time,
+                    status='scheduled'
+                ))
+            current_date += timedelta(days=1)
+        
+        if sessions_to_create:
+            Session.objects.bulk_create(sessions_to_create)
+
+class SessionViewSet(viewsets.ModelViewSet):
+    queryset = Session.objects.all()
+    serializer_class = SessionSerializer
+    permission_classes = [IsAdminOrHasAdminProfile]
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['batch__course__course_name', 'session_date']
+    ordering_fields = ['session_date', 'start_time']
+
+    def get_queryset(self):
+        queryset = Session.objects.all()
+        batch_id = self.request.query_params.get('batch_id')
+        if batch_id:
+            queryset = queryset.filter(batch_id=batch_id)
+        return queryset
+
+class SessionAttendanceViewSet(viewsets.ModelViewSet):
+    queryset = SessionAttendance.objects.all()
+    serializer_class = SessionAttendanceSerializer
+    permission_classes = [IsAdminOrHasAdminProfile]
+
+    def get_queryset(self):
+        queryset = SessionAttendance.objects.all()
+        session_id = self.request.query_params.get('session_id')
+        if session_id:
+            queryset = queryset.filter(session_id=session_id)
+        return queryset
+
+    @action(detail=False, methods=['post'], url_path='initialize')
+    def initialize_attendance(self, request):
+        session_id = request.data.get('session_id')
+        if not session_id:
+            return Response({'error': 'session_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            session = Session.objects.get(id=session_id)
+            # Find all students enrolled in the batch
+            from student.models import Enrollment
+            enrollments = Enrollment.objects.filter(batch=session.batch, student__user__is_active=True)
+            
+            attendances = []
+            for enrollment in enrollments:
+                # Check if attendance already exists
+                attendance, created = SessionAttendance.objects.get_or_create(
+                    session=session,
+                    student=enrollment.student,
+                    defaults={'status': 'present'}
+                )
+                attendances.append(attendance)
+            
+            serializer = self.get_serializer(attendances, many=True)
+            return Response(serializer.data)
+        except Session.DoesNotExist:
+            return Response({'error': 'Session not found'}, status=status.HTTP_404_NOT_FOUND)

@@ -1,5 +1,19 @@
 from django.contrib import admin as django_admin
 from .models import AdminProfile, SystemSettings, AuditLog, Notification, Report, Enquiry, CourseFeeStructure
+from .models_batches import Batch, Session
+
+
+@django_admin.register(Batch)
+class BatchAdmin(django_admin.ModelAdmin):
+    list_display = ['id', 'course', 'faculty', 'start_date', 'end_date']
+    list_filter = ['course', 'faculty', 'start_date']
+    search_fields = ['course__course_name', 'faculty__username']
+
+@django_admin.register(Session)
+class SessionAdmin(django_admin.ModelAdmin):
+    list_display = ['id', 'batch', 'session_date', 'status']
+    list_filter = ['status', 'session_date']
+    search_fields = ['batch__course__course_name']
 
 
 @django_admin.register(AdminProfile)

@@ -4,6 +4,8 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 
 User = get_user_model()
 
+from .models_batches import Batch, Session
+
 
 class AdminProfile(models.Model):
     """

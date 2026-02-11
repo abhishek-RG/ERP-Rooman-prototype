@@ -92,9 +92,9 @@ const Enquiry = () => {
                     {/* Header */}
                     <div className="text-center mb-12">
                         <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                            <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                            {/* <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
                                 Enquiry Form
-                            </span>
+                            </span> */}
                         </h1>
                         <p className="text-xl text-gray-600">
                             Fill in your details and we'll get back to you soon
@@ -524,7 +524,7 @@ const Enquiry = () => {
                                         <span>Submitting...</span>
                                     </span>
                                 ) : (
-                                    'Submit Enquiry'
+                                    'Submit'
                                 )}
                             </button>
                         </form>
